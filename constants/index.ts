@@ -82,12 +82,12 @@ export const menuPrincipal = [
         id: 1,
         title: "¡Basta de esperar en la U!",
         description:
-            "Selecciona tu universidad y explora tus restaurantes favoritos",
+            "Selecciona tu universidad y explora tus restaurantes favoritos.",
         image: imagenes.bienvenido1,
     },
     {
         id: 2,
-        title: "Haz tu pedido cuando quieras",
+        title: "Tu pedido, cuando quieras",
         description:
             "Elige tu plato, ajústalo a tu gusto y paga desde la app.",
         image: imagenes.bienvenido2,
@@ -104,3 +104,4 @@ export const menuPrincipal = [
 export const data = {
     menuPrincipal,
 };
+

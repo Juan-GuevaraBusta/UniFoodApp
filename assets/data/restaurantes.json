@@ -1,0 +1,146 @@
+[
+    {
+        "idRestaurante": 1,
+        "idUniversidad": 1,
+        "nombreRestaurante": "Wonka",
+        "imagen" : null,
+        "menu" : [
+            {
+                "idPlato": 1,
+                "nombre": "Spaghetti con pollo apanado",
+                "descripcion" : "Delicioso plato de pasta con salsa boloñesa y exquisito Pollo apanado",
+                "precio": 12000,
+                "categoria": "platos principales"
+            },
+            {
+                "idPlato": 2,
+                "nombre" : "Hamburguesa con papas",
+                "descripcion": "Hamburgesa con 150gr de carne, lechuga, tomate, y queso acompañado de papas fritas",
+                "precio": 15000,
+                "categoria": "Platos Principales"
+            },
+            {
+                "idPlato": 3,
+                "nombre": "Coca Cola 400mL",
+                "descripcion": null,
+                "precio": 3800,
+                "categoria": "bebidas"
+            },
+            {
+                "idPlato": 4,
+                "nombre": "jugo hit grande",
+                "descripcion": null,
+                "precio": 2800,
+                "categoria": "bebidas"
+            }
+        ]
+    },
+    {
+        "idRestaurante": 2,
+        "idUniversidad": 1,
+        "nombreRestaurante": "Bristo Saman",
+        "imagen": null,
+        "menu": [
+            {
+                "idPlato": 1,
+                "nombre": "Bowl de Carne",
+                "descripcion": "Bowl con arroz, carne molida, maicitos, pico de gallo y frijoles",
+                "precio": 17000,
+                "categoria": "platos principales"
+            },
+            {
+                "idPlato": 2,
+                "nombre": "Pasta Pesto",
+                "descripcion": "Spaghettis con Salsa Pesto acompañados de Queso parmesano y ",
+                "precio": 15000,
+                "categoria": "Platos Principales"
+            },
+            {
+                "idPlato": 3,
+                "nombre": "Coca Cola 400mL",
+                "descripcion": null,
+                "precio": 3800,
+                "categoria": "bebidas"
+            },
+            {
+                "idPlato": 4,
+                "nombre": "jugo hit grande",
+                "descripcion": null,
+                "precio": 2800,
+                "categoria": "bebidas"
+            }
+        ]
+    },
+    {
+        "idRestaurante": 3,
+        "idUniversidad": 2,
+        "nombreRestaurante": "Bristo Saman",
+        "imagen": null,
+        "menu": [
+            {
+                "idPlato": 1,
+                "nombre": "Bowl de Carne",
+                "descripcion": "Bowl con arroz, carne molida, maicitos, pico de gallo y frijoles",
+                "precio": 17000,
+                "categoria": "platos principales"
+            },
+            {
+                "idPlato": 2,
+                "nombre": "Pasta Pesto",
+                "descripcion": "Spaghettis con Salsa Pesto acompañados de Queso parmesano y ",
+                "precio": 15000,
+                "categoria": "Platos Principales"
+            },
+            {
+                "idPlato": 3,
+                "nombre": "Coca Cola 400mL",
+                "descripcion": null,
+                "precio": 3800,
+                "categoria": "bebidas"
+            },
+            {
+                "idPlato": 4,
+                "nombre": "jugo hit grande",
+                "descripcion": null,
+                "precio": 2800,
+                "categoria": "bebidas"
+            }
+        ]
+    },
+    {
+        "idRestaurante": 4,
+        "idUniversidad": 2,
+        "nombreRestaurante": "La esquina",
+        "imagen": null,
+        "menu": [
+            {
+                "idPlato": 1,
+                "nombre": "Chilaquiles de Res",
+                "descripcion": "Bowl con nachos, carne, queso y pico de gallo",
+                "precio": 19000,
+                "categoria": "platos principales"
+            },
+            {
+                "idPlato": 2,
+                "nombre": "Burrito de Cerdo",
+                "descripcion": "Burrito de cerdo con frijoles, pico de gallo, arroz y queso ",
+                "precio": 17500,
+                "categoria": "Platos Principales"
+            },
+            {
+                "idPlato": 3,
+                "nombre": "Jugo de naranja del valle",
+                "descripcion": null,
+                "precio": 4000,
+                "categoria": "bebidas"
+            },
+            {
+                "idPlato": 4,
+                "nombre": "Sprite",
+                "descripcion": null,
+                "precio": 3000,
+                "categoria": "bebidas"
+            }
+        ]
+    }   
+]
