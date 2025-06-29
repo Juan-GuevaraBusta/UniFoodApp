@@ -6,8 +6,8 @@ const Layout = () => {
   return (
     <Tabs
         screenOptions = {{
-              tabBarActiveTintColor: '#132e3c',
-              tabBarInactiveTintColor: '#132e3c',
+              tabBarActiveTintColor: '#FFFFFF',
+              tabBarInactiveTintColor: '#FFFFFF',
               tabBarStyle: {
                   backgroundColor: '#132e3c',
                   borderTopWidth: 1,
@@ -28,40 +28,28 @@ const Layout = () => {
               headerShown:false
         }}
         >
-            <Tabs.Screen 
-                name="menuPrincipal"
-                options={{
-                    title: 'Menú Principal',
-                    tabBarIcon: ({ color, focused }) => (
-                        <View style={{ alignItems: 'center' }}>
-                            <Text style={{ fontSize: 20, color }}>👤</Text>
-                        </View>
-                    ),
-                    }}
-            />
+
           <Tabs.Screen
-              name="menuPrincipal"
+              name="home"
               options={{
                   title: 'Menú Principal',
-                  tabBarIcon: ({ color, focused }) => (
-                      <View style={{ alignItems: 'center' }}>
-                          <Text style={{ fontSize: 20, color }}>🍽️</Text>
-                      </View>
+                  tabBarIcon: ({ color, size }) => (
+                      <Home color={color} size={size || 24} />
                   ),
               }}
           />
+
           <Tabs.Screen
-              name="menuPrincipal"
+              name="profile"
               options={{
-                  title: 'Menú Principal',
-                  tabBarIcon: ({ color, focused }) => (
-                      <View style={{ alignItems: 'center' }}>
-                          <Text style={{ fontSize: 20, color }}>🍽️</Text>
-                      </View>
+                  title: 'Perfil',
+                  tabBarIcon: ({ color, size }) => (
+                      <User color={color} size={size || 24} />
                   ),
               }}
           />
         </Tabs>
+        
   );
 };
 

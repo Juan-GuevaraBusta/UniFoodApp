@@ -16,7 +16,7 @@ const MenuInicio = () => {
         <SafeAreaView className="flex h-full items-center justify-between bg-white">
             <TouchableOpacity
                 onPress={() => {
-                    router.replace('/(auth)/iniciaSesion');
+                    router.replace('/(root)/(tabs)/home');
                 }}
                 className="w-full flex justify-end items-end p-5"
             >
@@ -33,8 +33,7 @@ const MenuInicio = () => {
                     <View key={item.id} className="flex-1 items-center p-5">
 
                         <View className="h-[10%] justify-center items-center w-full">
-                            <Text className="text-black text-3xl font-JakartaBold text-center">
-                                 
+                            <Text className="text-black text-3xl font-JakartaBold text-center">                              
                                 {item.title}
                             </Text>
                         </View>

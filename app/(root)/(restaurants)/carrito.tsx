@@ -1,11 +1,11 @@
 /* eslint-disable prettier/prettier */
 import { Text } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-const uniSelection = () => {
+const carrito = () => {
   return (
     <SafeAreaView>
-      <Text>Profile</Text>
+      <Text>menuRestaurante</Text>
     </SafeAreaView>
   );
 };
-export default uniSelection;
+export default carrito;

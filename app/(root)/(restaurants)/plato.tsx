@@ -1,11 +1,11 @@
 /* eslint-disable prettier/prettier */
 import { Text } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-const History = () => {
+const plato = () => {
   return (
     <SafeAreaView>
-      <Text>History</Text>
+      <Text>menuRestaurante</Text>
     </SafeAreaView>
   );
 };
-export default History;
+export default plato;

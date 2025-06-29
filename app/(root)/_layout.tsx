@@ -5,7 +5,8 @@ const LayoutTabs = () => {
         <>
             <Stack>
                 <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        //Aqui deberán ir las otras stack sobre el restaurante y posteriormente el plato
+                <Stack.Screen name="uniSelection" options={{ headerShown: false }} />
+                <Stack.Screen name="(restaurants)" options={{ headerShown: false }} />
             </Stack>
         </>
     );
