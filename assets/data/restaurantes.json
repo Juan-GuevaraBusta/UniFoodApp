@@ -3,45 +3,116 @@
         "idRestaurante": 1,
         "idUniversidad": 1,
         "nombreRestaurante": "Wonka",
-        "imagen" : "icesi",
+        "imagen": "icesi",
         "calificacionRestaurante": 4.5,
         "tiempoEntrega": "20",
         "categorias": [
             "Salchipapa",
             "Hamburguesa",
-            "Perro"],
-        "menu" : [
+            "Perro"
+        ],
+        "menu": [
             {
                 "idPlato": 1,
                 "nombre": "Spaghetti con pollo apanado",
-                "descripcion" : "Delicioso plato de pasta con salsa boloñesa y exquisito Pollo apanado",
+                "descripcion": "Delicioso plato de pasta con salsa boloñesa y exquisito Pollo apanado",
                 "precio": 12000,
                 "categoria": "Pasta",
-                "imagen": "bowlPrueba"
+                "imagen": "bowlPrueba",
+                "tipoPlato": "personalizable",
+                "toppingsBase": [],
+                "toppingsDisponibles": [
+                    {
+                        "id": 1,
+                        "nombre": "Queso Parmesano",
+                        "precio": 1000
+                    },
+                    {
+                        "id": 2,
+                        "nombre": "Pollo extra",
+                        "precio": 3000
+                    },
+                    {
+                        "id": 3,
+                        "nombre": "Champiñones",
+                        "precio": 2000
+                    }
+                ]
             },
             {
                 "idPlato": 2,
-                "nombre" : "Hamburguesa con papas",
+                "nombre": "Hamburguesa con papas",
                 "descripcion": "Hamburgesa con 150gr de carne, lechuga, tomate, y queso acompañado de papas fritas",
                 "precio": 15000,
                 "categoria": "Hamburguesa",
-                "imagen": "bowlPrueba"
+                "imagen": "bowlPrueba",
+                "tipoPlato": "mixto",
+                "toppingsBase": [
+                    {
+                        "id": 1,
+                        "nombre": "Carne 150gr",
+                        "removible": false
+                    },
+                    {
+                        "id": 2,
+                        "nombre": "Pan",
+                        "removible": false
+                    },
+                    {
+                        "id": 3,
+                        "nombre": "Lechuga",
+                        "removible": true
+                    },
+                    {
+                        "id": 4,
+                        "nombre": "Tomate",
+                        "removible": true
+                    },
+                    {
+                        "id": 5,
+                        "nombre": "Queso",
+                        "removible": true
+                    }
+                ],
+                "toppingsDisponibles": [
+                    {
+                        "id": 1,
+                        "nombre": "Carne extra",
+                        "precio": 6000
+                    },
+                    {
+                        "id": 2,
+                        "nombre": "Tocineta",
+                        "precio": 4000
+                    },
+                    {
+                        "id": 3,
+                        "nombre": "Aguacate",
+                        "precio": 2500
+                    }
+                ]
             },
             {
                 "idPlato": 3,
                 "nombre": "Coca Cola 400mL",
-                "descripcion": null,
+                "descripcion": "Bebida gaseosa refrescante",
                 "precio": 3800,
                 "categoria": "bebidas",
-                "imagen": "bowlPrueba"
+                "imagen": "bowlPrueba",
+                "tipoPlato": "simple",
+                "toppingsBase": [],
+                "toppingsDisponibles": []
             },
             {
                 "idPlato": 4,
                 "nombre": "jugo hit grande",
-                "descripcion": null,
+                "descripcion": "Jugo de frutas naturales",
                 "precio": 2800,
                 "categoria": "bebidas",
-                "imagen": "bowlPrueba"
+                "imagen": "bowlPrueba",
+                "tipoPlato": "simple",
+                "toppingsBase": [],
+                "toppingsDisponibles": []
             },
             {
                 "idPlato": 5,
@@ -49,7 +120,46 @@
                 "descripcion": "Hamburgesa con 300gr de carne, lechuga, tomate, y queso acompañado de papas fritas",
                 "precio": 20000,
                 "categoria": "Hamburguesa",
-                "imagen": "bowlPrueba"
+                "imagen": "bowlPrueba",
+                "tipoPlato": "fijo",
+                "toppingsBase": [
+                    {
+                        "id": 1,
+                        "nombre": "Carne doble 300gr",
+                        "removible": false
+                    },
+                    {
+                        "id": 2,
+                        "nombre": "Pan brioche",
+                        "removible": false
+                    },
+                    {
+                        "id": 3,
+                        "nombre": "Lechuga",
+                        "removible": true
+                    },
+                    {
+                        "id": 4,
+                        "nombre": "Tomate",
+                        "removible": true
+                    },
+                    {
+                        "id": 5,
+                        "nombre": "Queso cheddar",
+                        "removible": true
+                    },
+                    {
+                        "id": 6,
+                        "nombre": "Cebolla",
+                        "removible": true
+                    },
+                    {
+                        "id": 7,
+                        "nombre": "Papas fritas",
+                        "removible": false
+                    }
+                ],
+                "toppingsDisponibles": []
             },
             {
                 "idPlato": 6,
@@ -57,7 +167,52 @@
                 "descripcion": "Hamburgesa con 150gr de pollo, lechuga, tomate, y queso acompañado de papas fritas",
                 "precio": 18000,
                 "categoria": "Hamburguesa",
-                "imagen": "bowlPrueba"
+                "imagen": "bowlPrueba",
+                "tipoPlato": "mixto",
+                "toppingsBase": [
+                    {
+                        "id": 1,
+                        "nombre": "Pollo 150gr",
+                        "removible": false
+                    },
+                    {
+                        "id": 2,
+                        "nombre": "Pan",
+                        "removible": false
+                    },
+                    {
+                        "id": 3,
+                        "nombre": "Lechuga",
+                        "removible": true
+                    },
+                    {
+                        "id": 4,
+                        "nombre": "Tomate",
+                        "removible": true
+                    },
+                    {
+                        "id": 5,
+                        "nombre": "Queso",
+                        "removible": true
+                    }
+                ],
+                "toppingsDisponibles": [
+                    {
+                        "id": 1,
+                        "nombre": "Pollo extra",
+                        "precio": 5000
+                    },
+                    {
+                        "id": 2,
+                        "nombre": "Tocineta",
+                        "precio": 4000
+                    },
+                    {
+                        "id": 3,
+                        "nombre": "Salsa BBQ",
+                        "precio": 1000
+                    }
+                ]
             }
         ]
     },
@@ -80,31 +235,95 @@
                 "descripcion": "Bowl con arroz, carne molida, maicitos, pico de gallo y frijoles",
                 "precio": 17000,
                 "categoria": "Bowl",
-                "imagen": "bowlPrueba"
+                "imagen": "bowlPrueba",
+                "tipoPlato": "personalizable",
+                "toppingsBase": [],
+                "toppingsDisponibles": [
+                    {
+                        "id": 1,
+                        "nombre": "Arroz blanco",
+                        "precio": 2000
+                    },
+                    {
+                        "id": 2,
+                        "nombre": "Carne molida",
+                        "precio": 4000
+                    },
+                    {
+                        "id": 3,
+                        "nombre": "Frijoles",
+                        "precio": 2500
+                    },
+                    {
+                        "id": 4,
+                        "nombre": "Maíz",
+                        "precio": 1500
+                    },
+                    {
+                        "id": 5,
+                        "nombre": "Pico de gallo",
+                        "precio": 1000
+                    },
+                    {
+                        "id": 6,
+                        "nombre": "Aguacate",
+                        "precio": 3000
+                    }
+                ]
             },
             {
                 "idPlato": 2,
                 "nombre": "Pasta Pesto",
-                "descripcion": "Spaghettis con Salsa Pesto acompañados de Queso parmesano y ",
+                "descripcion": "Spaghettis con Salsa Pesto acompañados de Queso parmesano",
                 "precio": 15000,
                 "categoria": "Pasta",
-                "imagen": "bowlPrueba"
+                "imagen": "bowlPrueba",
+                "tipoPlato": "fijo",
+                "toppingsBase": [
+                    {
+                        "id": 1,
+                        "nombre": "Spaghetti",
+                        "removible": false
+                    },
+                    {
+                        "id": 2,
+                        "nombre": "Salsa pesto",
+                        "removible": false
+                    },
+                    {
+                        "id": 3,
+                        "nombre": "Queso parmesano",
+                        "removible": true
+                    },
+                    {
+                        "id": 4,
+                        "nombre": "Albahaca fresca",
+                        "removible": true
+                    }
+                ],
+                "toppingsDisponibles": []
             },
             {
                 "idPlato": 3,
                 "nombre": "Coca Cola 400mL",
-                "descripcion": null,
+                "descripcion": "Bebida gaseosa refrescante",
                 "precio": 3800,
                 "categoria": "bebidas",
-                "imagen": "bowlPrueba"
+                "imagen": "bowlPrueba",
+                "tipoPlato": "simple",
+                "toppingsBase": [],
+                "toppingsDisponibles": []
             },
             {
                 "idPlato": 4,
                 "nombre": "jugo hit grande",
-                "descripcion": null,
+                "descripcion": "Jugo de frutas naturales",
                 "precio": 2800,
                 "categoria": "bebidas",
-                "imagen": "bowlPrueba"
+                "imagen": "bowlPrueba",
+                "tipoPlato": "simple",
+                "toppingsBase": [],
+                "toppingsDisponibles": []
             }
         ]
     },
@@ -126,33 +345,118 @@
                 "nombre": "Bowl de Carne",
                 "descripcion": "Bowl con arroz, carne molida, maicitos, pico de gallo y frijoles",
                 "precio": 17000,
-                "categoria": "bowlPrueba",
-                "imagen": "bowlPrueba"
+                "categoria": "Bowl",
+                "imagen": "bowlPrueba",
+                "tipoPlato": "mixto",
+                "toppingsBase": [
+                    {
+                        "id": 1,
+                        "nombre": "Arroz blanco",
+                        "removible": false
+                    },
+                    {
+                        "id": 2,
+                        "nombre": "Carne molida",
+                        "removible": false
+                    },
+                    {
+                        "id": 3,
+                        "nombre": "Frijoles",
+                        "removible": true
+                    },
+                    {
+                        "id": 4,
+                        "nombre": "Maíz",
+                        "removible": true
+                    }
+                ],
+                "toppingsDisponibles": [
+                    {
+                        "id": 1,
+                        "nombre": "Aguacate",
+                        "precio": 3000
+                    },
+                    {
+                        "id": 2,
+                        "nombre": "Queso rallado",
+                        "precio": 2000
+                    },
+                    {
+                        "id": 3,
+                        "nombre": "Crema agria",
+                        "precio": 1500
+                    }
+                ]
             },
             {
                 "idPlato": 2,
                 "nombre": "Pasta Pesto",
-                "descripcion": "Spaghettis con Salsa Pesto acompañados de Queso parmesano y ",
+                "descripcion": "Spaghettis con Salsa Pesto acompañados de Queso parmesano",
                 "precio": 15000,
                 "categoria": "Pasta",
-                "imagen": "bowlPrueba"
-                
+                "imagen": "bowlPrueba",
+                "tipoPlato": "personalizable",
+                "toppingsBase": [],
+                "toppingsDisponibles": [
+                    {
+                        "id": 1,
+                        "nombre": "Spaghetti",
+                        "precio": 8000,
+                        "categoria": "Pasta"
+                    },
+                    {
+                        "id": 2,
+                        "nombre": "Penne",
+                        "precio": 8000,
+                        "categoria": "Pasta"
+                    },
+                    {
+                        "id": 3,
+                        "nombre": "Salsa pesto",
+                        "precio": 3000,
+                        "categoria": "Salsas"
+                    },
+                    {
+                        "id": 4,
+                        "nombre": "Salsa alfredo",
+                        "precio": 3000,
+                        "categoria": "Salsas"
+                    },
+                    {
+                        "id": 5,
+                        "nombre": "Pollo",
+                        "precio": 4000,
+                        "categoria": "Proteínas"
+                    },
+                    {
+                        "id": 6,
+                        "nombre": "Queso parmesano",
+                        "precio": 2000,
+                        "categoria": "Lácteos"
+                    }
+                ]
             },
             {
                 "idPlato": 3,
                 "nombre": "Coca Cola 400mL",
-                "descripcion": null,
+                "descripcion": "Bebida gaseosa refrescante",
                 "precio": 3800,
                 "categoria": "bebidas",
-                "imagen": "bowlPrueba"
+                "imagen": "bowlPrueba",
+                "tipoPlato": "simple",
+                "toppingsBase": [],
+                "toppingsDisponibles": []
             },
             {
                 "idPlato": 4,
                 "nombre": "jugo hit grande",
-                "descripcion": null,
+                "descripcion": "Jugo de frutas naturales",
                 "precio": 2800,
                 "categoria": "bebidas",
-                "imagen": "bowlPrueba"
+                "imagen": "bowlPrueba",
+                "tipoPlato": "simple",
+                "toppingsBase": [],
+                "toppingsDisponibles": []
             }
         ]
     },
@@ -175,49 +479,201 @@
                 "descripcion": "Bowl con nachos, carne, queso y pico de gallo",
                 "precio": 19000,
                 "categoria": "Chilaquiles",
-                "imagen": "bowlPrueba"
+                "imagen": "bowlPrueba",
+                "tipoPlato": "fijo",
+                "toppingsBase": [
+                    {
+                        "id": 1,
+                        "nombre": "Nachos",
+                        "removible": false
+                    },
+                    {
+                        "id": 2,
+                        "nombre": "Carne de res",
+                        "removible": false
+                    },
+                    {
+                        "id": 3,
+                        "nombre": "Queso fundido",
+                        "removible": true
+                    },
+                    {
+                        "id": 4,
+                        "nombre": "Pico de gallo",
+                        "removible": true
+                    },
+                    {
+                        "id": 5,
+                        "nombre": "Frijoles refritos",
+                        "removible": true
+                    },
+                    {
+                        "id": 6,
+                        "nombre": "Jalapeños",
+                        "removible": true
+                    }
+                ],
+                "toppingsDisponibles": []
             },
             {
                 "idPlato": 2,
                 "nombre": "Burrito de Cerdo",
-                "descripcion": "Burrito de cerdo con frijoles, pico de gallo, arroz y queso ",
+                "descripcion": "Burrito de cerdo con frijoles, pico de gallo, arroz y queso",
                 "precio": 17500,
                 "categoria": "Burritos",
-                "imagen": "bowlPrueba"
-                
+                "imagen": "bowlPrueba",
+                "tipoPlato": "mixto",
+                "toppingsBase": [
+                    {
+                        "id": 1,
+                        "nombre": "Tortilla de harina",
+                        "removible": false
+                    },
+                    {
+                        "id": 2,
+                        "nombre": "Cerdo desmenuzado",
+                        "removible": false
+                    },
+                    {
+                        "id": 3,
+                        "nombre": "Arroz",
+                        "removible": true
+                    },
+                    {
+                        "id": 4,
+                        "nombre": "Frijoles",
+                        "removible": true
+                    },
+                    {
+                        "id": 5,
+                        "nombre": "Queso",
+                        "removible": true
+                    }
+                ],
+                "toppingsDisponibles": [
+                    {
+                        "id": 1,
+                        "nombre": "Guacamole",
+                        "precio": 3000
+                    },
+                    {
+                        "id": 2,
+                        "nombre": "Crema agria",
+                        "precio": 2000
+                    },
+                    {
+                        "id": 3,
+                        "nombre": "Jalapeños extra",
+                        "precio": 1500
+                    }
+                ]
             },
             {
                 "idPlato": 3,
                 "nombre": "Jugo de naranja del valle",
-                "descripcion": null,
+                "descripcion": "Jugo natural de naranja",
                 "precio": 4000,
                 "categoria": "bebidas",
-                "imagen": "bowlPrueba"
+                "imagen": "bowlPrueba",
+                "tipoPlato": "simple",
+                "toppingsBase": [],
+                "toppingsDisponibles": []
             },
             {
                 "idPlato": 4,
                 "nombre": "Sprite",
-                "descripcion": null,
+                "descripcion": "Bebida gaseosa de limón",
                 "precio": 3000,
                 "categoria": "bebidas",
-                "imagen": "bowlPrueba"
+                "imagen": "bowlPrueba",
+                "tipoPlato": "simple",
+                "toppingsBase": [],
+                "toppingsDisponibles": []
             },
             {
                 "idPlato": 5,
                 "nombre": "Burrito de Res",
-                "descripcion": "Burrito de cerdo con frijoles, pico de gallo, arroz y queso ",
+                "descripcion": "Burrito de res con frijoles, pico de gallo, arroz y queso",
                 "precio": 17500,
                 "categoria": "Burritos",
-                "imagen": "bowlPrueba"
+                "imagen": "bowlPrueba",
+                "tipoPlato": "fijo",
+                "toppingsBase": [
+                    {
+                        "id": 1,
+                        "nombre": "Tortilla de harina",
+                        "removible": false
+                    },
+                    {
+                        "id": 2,
+                        "nombre": "Carne de res",
+                        "removible": false
+                    },
+                    {
+                        "id": 3,
+                        "nombre": "Arroz cilantro",
+                        "removible": true
+                    },
+                    {
+                        "id": 4,
+                        "nombre": "Frijoles negros",
+                        "removible": true
+                    },
+                    {
+                        "id": 5,
+                        "nombre": "Queso cheddar",
+                        "removible": true
+                    },
+                    {
+                        "id": 6,
+                        "nombre": "Lechuga",
+                        "removible": true
+                    }
+                ],
+                "toppingsDisponibles": []
             },
             {
                 "idPlato": 6,
                 "nombre": "Burrito de Pollo",
-                "descripcion": "Burrito de cerdo con frijoles, pico de gallo, arroz y queso ",
+                "descripcion": "Burrito de pollo con frijoles, pico de gallo, arroz y queso",
                 "precio": 17500,
                 "categoria": "Burritos",
-                "imagen": "bowlPrueba"
+                "imagen": "bowlPrueba",
+                "tipoPlato": "personalizable",
+                "toppingsBase": [],
+                "toppingsDisponibles": [
+                    {
+                        "id": 1,
+                        "nombre": "Pollo a la plancha",
+                        "precio": 8000
+                    },
+                    {
+                        "id": 2,
+                        "nombre": "Pollo BBQ",
+                        "precio": 9000
+                    },
+                    {
+                        "id": 3,
+                        "nombre": "Arroz blanco",
+                        "precio": 2000
+                    },
+                    {
+                        "id": 4,
+                        "nombre": "Frijoles",
+                        "precio": 2500
+                    },
+                    {
+                        "id": 5,
+                        "nombre": "Queso",
+                        "precio": 2000
+                    },
+                    {
+                        "id": 6,
+                        "nombre": "Salsa picante",
+                        "precio": 1000
+                    }
+                ]
             }
         ]
-    }   
+    }
 ]

@@ -214,7 +214,7 @@ const menuRestaurante = () => {
 
                         {/* Botón + en la esquina */}
                         <TouchableOpacity
-                          className="absolute top-2 right-2 w-8 h-8 bg-[#132e3c] rounded-full flex items-center justify-center"
+                          className="absolute top-2 right-2 w-8 h-8 bg-[#132e3c] rounded-full flex items-center justify-center "
                           onPress={() => seleccionarPlato(plato)}
                         >
                           <Text className="text-white text-lg font-bold">+</Text>
@@ -222,12 +222,12 @@ const menuRestaurante = () => {
                       </View>
 
                       {/* Información del plato */}
-                      <View className="px-3 pb-4">
-                        <Text className="text-[#132e3c] text-sm font-JakartaBold mb-1" numberOfLines={2}>
+                      <View className="px-3 pb-4 items-center justify-center">
+                        <Text className="text-[#132e3c] text-base font-JakartaExtraBold mb-1" numberOfLines={2}>
                           {plato.nombre}
                         </Text>
 
-                        <Text className="text-[#132e3c] text-lg font-JakartaExtraBold">
+                        <Text className="text-[#132e3c] text-lg font-JakartaLight">
                           {formatearPrecio(plato.precio)}
                         </Text>
                       </View>
