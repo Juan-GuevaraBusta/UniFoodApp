@@ -7,6 +7,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback } from 'react';
 import { useRestaurantes, type Plato as PlatoType } from '@/hooks/useRestaurantes';
+import { useCarrito } from '@/context/contextCarrito';
 import { usePlato } from '@/hooks/usePlato';
 import { Stack } from "expo-router";
 import { Plus, Minus } from "lucide-react-native";
@@ -17,13 +18,17 @@ const plato = () => {
   const [idRestaurante, setIdRestaurante] = useState(0);
   const [restauranteNombre, setRestauranteNombre] = useState('');
   const [platoNombre, setPlatoNombre] = useState('');
+  const [universidadActual, setUniversidadActual] = useState('')
 
-  const { obtenerPlatoPorId, agregarAlCarrito } = useRestaurantes();
+  const { obtenerPlatoPorId } = useRestaurantes();
+  const { agregarAlCarrito, obtenerCantidadTotalCarrito } = useCarrito();
 
   // Hook de plato - siempre se ejecuta con los mismos parámetros
   const platoHook = usePlato({
     plato: platoActual,
-    idRestaurante
+    idRestaurante,
+    nombreRestaurante: restauranteNombre,
+    nombreUniversidad: universidadActual
   });
 
   useFocusEffect(
@@ -37,6 +42,7 @@ const plato = () => {
     const restauranteId = await AsyncStorage.getItem('restauranteSeleccionado');
     const nombreRestaurante = await AsyncStorage.getItem('restauranteNombre');
     const nombrePlato = await AsyncStorage.getItem('platoNombre');
+    const nombreUniversidad = await AsyncStorage.getItem('universidadNombre')
 
     if (restauranteId && platoId) {
       const idRest = parseInt(restauranteId);
@@ -57,17 +63,27 @@ const plato = () => {
     if (nombrePlato) {
       setPlatoNombre(nombrePlato);
     }
+    if (nombreUniversidad) {
+      setUniversidadActual(nombreUniversidad)
+    }
   };
 
   const handleAgregarAlCarrito = async () => {
     const platoCarrito = platoHook.crearPlatoParaCarrito();
-    if (!platoCarrito || !platoHook.puedeAgregarAlCarrito) return;
+
+    if (!platoCarrito || !platoHook.puedeAgregarAlCarrito) {
+      return;
+    }
 
     const idUnico = agregarAlCarrito(platoCarrito);
 
     if (idUnico) {
       platoHook.limpiarSelecciones();
-      router.back();
+
+      // Esperar un poco para que el estado se actualice
+      setTimeout(() => {
+        router.back();
+      }, 100);
     }
   };
 
@@ -329,3 +345,4 @@ const plato = () => {
 };
 
 export default plato;
+

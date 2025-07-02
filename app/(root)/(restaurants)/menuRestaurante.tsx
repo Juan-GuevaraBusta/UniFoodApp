@@ -7,7 +7,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback } from 'react';
 import { useRestaurantes, type Plato } from '@/hooks/useRestaurantes';
 import { Stack } from "expo-router";
-import { Star, Clock } from "lucide-react-native"
+import { Star, Clock, ShoppingCart } from "lucide-react-native";
+import { useCarrito } from "@/context/contextCarrito";
 
 const menuRestaurante = () => {
   const [restauranteActual, setRestauranteActual] = useState('');
@@ -18,14 +19,13 @@ const menuRestaurante = () => {
   const [calificacion, setCalificacion] = useState(0);
   const [categorias, setCategorias] = useState<string[]>([]);
 
-  const {
-    obtenerRestaurantePorId
-  } = useRestaurantes();
+  const { obtenerRestaurantePorId } = useRestaurantes();
+  const { obtenerCantidadTotalCarrito } = useCarrito();
 
   useFocusEffect(
     useCallback(() => {
       cargarDatosRestaurante();
-    }, [])
+    }, [obtenerCantidadTotalCarrito])
   );
 
   const cargarDatosRestaurante = async () => {
@@ -109,6 +109,21 @@ const menuRestaurante = () => {
               className="absolute left-0 top-0 w-10 h-10 rounded-full flex items-center justify-center z-10"
             >
               <Text className="text-[#132e3c] text-2xl font-JakartaBold">✕</Text>
+            </TouchableOpacity>
+
+            {/* Botón del carrito - SIEMPRE VISIBLE */}
+            <TouchableOpacity
+              onPress={() => router.push('/(root)/(restaurants)/carrito')}
+              className="absolute right-0 top-0 w-12 h-12 rounded-full bg-[#132e3c] flex items-center justify-center z-10"
+            >
+              <ShoppingCart size={20} color="white" />
+              {obtenerCantidadTotalCarrito() > 0 && (
+                <View className="absolute -top-1 -right-1 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center">
+                  <Text className="text-white text-xs font-JakartaBold">
+                    {obtenerCantidadTotalCarrito()}
+                  </Text>
+                </View>
+              )}
             </TouchableOpacity>
 
             {/* Nombre del restaurante - Contenedor separado, centrado */}

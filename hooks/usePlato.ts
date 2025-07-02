@@ -1,13 +1,16 @@
-// hooks/usePlato.ts - Hook para personalización de plato (React Native)
+// hooks/usePlato.ts - Actualizado
 import { useState, useMemo, useCallback, useEffect } from 'react';
-import { Plato, Topping, PlatoCarrito } from './useRestaurantes';
+import { Plato, Topping } from './useRestaurantes';
+import { PlatoCarrito } from '@/context/contextCarrito';
 
 interface UsePlatoProps {
     plato: Plato | null;
     idRestaurante: number;
+    nombreRestaurante?: string;    // ← AGREGAR
+    nombreUniversidad?: string;    // ← AGREGAR
 }
 
-export const usePlato = ({ plato, idRestaurante }: UsePlatoProps) => {
+export const usePlato = ({ plato, idRestaurante, nombreRestaurante = '', nombreUniversidad = '' }: UsePlatoProps) => {
     // Estados simplificados para checkboxes
     const [toppingsAdicionalesSeleccionados, setToppingsAdicionalesSeleccionados] = useState<number[]>([]);
     const [toppingsBaseRemocionados, setToppingsBaseRemocionados] = useState<number[]>([]);
@@ -93,12 +96,14 @@ export const usePlato = ({ plato, idRestaurante }: UsePlatoProps) => {
         return toppingsBaseRemocionados;
     }, [toppingsBaseRemocionados]);
 
-    // Crear objeto para carrito
+    // Crear objeto para carrito - ACTUALIZADO
     const crearPlatoParaCarrito = useCallback((): Omit<PlatoCarrito, 'idUnico' | 'fechaAgregado'> | null => {
         if (!plato) return null;
 
         return {
             idRestaurante,
+            nombreRestaurante,        // ← AGREGAR
+            nombreUniversidad,        // ← AGREGAR
             plato,
             cantidad,
             comentarios: comentarios.trim(),
@@ -106,7 +111,17 @@ export const usePlato = ({ plato, idRestaurante }: UsePlatoProps) => {
             toppingsBaseRemocionados: obtenerToppingsBaseRemocionados(),
             precioTotal
         };
-    }, [idRestaurante, plato, cantidad, comentarios, obtenerToppingsSeleccionados, obtenerToppingsBaseRemocionados, precioTotal]);
+    }, [
+        idRestaurante,
+        nombreRestaurante,           // ← AGREGAR
+        nombreUniversidad,           // ← AGREGAR
+        plato,
+        cantidad,
+        comentarios,
+        obtenerToppingsSeleccionados,
+        obtenerToppingsBaseRemocionados,
+        precioTotal
+    ]);
 
     // Limpiar selecciones
     const limpiarSelecciones = useCallback(() => {
@@ -145,7 +160,7 @@ export const usePlato = ({ plato, idRestaurante }: UsePlatoProps) => {
         toggleToppingAdicional,
         toggleToppingBase,
 
-        // Verificadores - NOMBRES CORRECTOS
+        // Verificadores
         isToppingAdicionalSeleccionado,
         isToppingBaseRemovido,
 

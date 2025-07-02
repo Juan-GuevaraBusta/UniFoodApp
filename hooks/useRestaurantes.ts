@@ -36,11 +36,13 @@ export interface PlatoCarrito {
     idRestaurante: number;
     plato: Plato;
     cantidad: number;
+    comentarios: string;
+    nombreUniversidad: string;
+    nombreRestaurante: string,
     toppingsSeleccionados: Topping[];
     toppingsBaseRemocionados: number[];
     precioTotal: number;
     idUnico: string;
-    comentarios:string;
     fechaAgregado: Date;
 }
 

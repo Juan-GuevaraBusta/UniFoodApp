@@ -6,6 +6,7 @@ import "@/global.css";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect, useState } from "react";
 import { View, Image } from "react-native";
+import { CarritoProvider } from "@/context/contextCarrito"; // ← AGREGAR ESTE IMPORT
 
 SplashScreen.preventAutoHideAsync();
 
@@ -52,7 +53,7 @@ export default function RootLayout() {
   }
 
   return (
-    <>
+    <CarritoProvider>
       <Stack>
         <Stack.Screen name="index" options={{ headerShown: false }} />
         <Stack.Screen name="(root)" options={{ headerShown: false }} />
@@ -60,6 +61,6 @@ export default function RootLayout() {
         <Stack.Screen name="+not-found" />
       </Stack>
       <StatusBar style="auto" />
-    </>
+    </CarritoProvider>
   );
 }
