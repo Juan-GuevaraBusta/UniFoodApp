@@ -6,7 +6,27 @@ import "@/global.css";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect, useState } from "react";
 import { View, Image } from "react-native";
-import { CarritoProvider } from "@/context/contextCarrito"; // ← AGREGAR ESTE IMPORT
+import { CarritoProvider } from "@/context/contextCarrito";
+import { Amplify } from 'aws-amplify';
+import outputs from '../amplify_outputs.json';
+
+Amplify.configure(outputs);
+
+try {
+  // Importar dinámicamente para mejor debugging
+  const outputs = require('../amplify_outputs.json');
+
+  console.log('📄 Archivo amplify_outputs.json cargado:', !!outputs);
+  console.log('🔐 Auth config existe:', !!outputs.auth);
+  console.log('🗄️ Data config existe:', !!outputs.data);
+
+  // Configurar Amplify
+  Amplify.configure(outputs);
+
+  console.log('✅ Amplify configurado exitosamente');
+} catch (error) {
+  console.error('❌ Error configurando Amplify:', error);
+}
 
 SplashScreen.preventAutoHideAsync();
 
@@ -25,14 +45,12 @@ export default function RootLayout() {
   useEffect(() => {
     if (loaded) {
       SplashScreen.hideAsync();
-      // Mostrar tu splash por 2 segundos
       setTimeout(() => {
         setShowCustomSplash(false);
       }, 2000);
     }
   }, [loaded]);
 
-  // Tu splash personalizado (¡Este SÍ funciona!)
   if (showCustomSplash) {
     return (
       <View className="flex-1 bg-white items-center justify-center">

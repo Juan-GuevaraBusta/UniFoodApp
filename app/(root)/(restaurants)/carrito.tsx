@@ -7,6 +7,7 @@ import { router } from 'expo-router';
 import { useCarrito } from '@/context/contextCarrito';
 import { Stack } from "expo-router";
 import { Plus, Minus, Trash2, ArrowLeft } from "lucide-react-native";
+import { useAmplifyData } from "@/hooks/useAmplifyData";
 
 const Carrito = () => {
   const {
@@ -18,6 +19,8 @@ const Carrito = () => {
     limpiarCarrito
   } = useCarrito();
 
+  //Guardar pedidos en la base de datos
+  const { crearPedido } = useAmplifyData();
 
   // Función para formatear precio
   const formatearPrecio = (precio: number) => {
