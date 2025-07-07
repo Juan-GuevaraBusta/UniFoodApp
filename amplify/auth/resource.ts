@@ -7,6 +7,7 @@ export const auth = defineAuth({
   userAttributes: {
     email: {
       required: true,
+      mutable: false,
     },
   },
 });

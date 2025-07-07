@@ -35,7 +35,12 @@ const iniciaSesion = () => {
     setIsLoading(true);
 
     try {
+      console.log('🧪 DEBUGGING - Iniciando login para:', email);
+      console.log('🧪 DEBUGGING - Longitud de contraseña:', password.length);
+
       const result = await iniciarSesion(email.trim(), password);
+
+      console.log('🧪 DEBUGGING - Resultado completo:', result);
 
       if (result.success && result.role) {
         const roleDisplayName = getRoleDisplayName(result.role);
@@ -52,9 +57,30 @@ const iniciaSesion = () => {
           ]
         );
       } else {
-        Alert.alert("Error al iniciar sesión", result.error);
+        console.log('🧪 DEBUGGING - Error específico:', result.error);
+
+        // Manejar error específico de confirmación
+        if ("needsConfirmation" in result && result.needsConfirmation) {
+          Alert.alert(
+            "Cuenta no confirmada",
+            result.error,
+            [
+              {
+                text: "Confirmar ahora",
+                onPress: () => router.push(`/(auth)/confirmarEmail?email=${encodeURIComponent(email.trim())}`),
+              },
+              {
+                text: "Cancelar",
+                style: "cancel",
+              },
+            ]
+          );
+        } else {
+          Alert.alert("Error al iniciar sesión", result.error);
+        }
       }
     } catch (error) {
+      console.error('🧪 DEBUGGING - Error en handleLogin:', error);
       Alert.alert("Error", "Ha ocurrido un error inesperado");
     } finally {
       setIsLoading(false);

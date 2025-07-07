@@ -91,8 +91,8 @@ const inscribete = () => {
           `Te hemos enviado un código de confirmación a tu email. Tu cuenta será de tipo: ${roleDisplayName}`,
           [
             {
-              text: "Ir a iniciar sesión",
-              onPress: () => router.replace("/(auth)/iniciaSesion"),
+              text: "Confirmar Email",
+              onPress: () => router.push(`/(auth)/confirmarEmail?email=${encodeURIComponent(email.trim())}`),
             },
           ]
         );

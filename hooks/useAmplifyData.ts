@@ -1,121 +1,114 @@
-// hooks/useAmplifyData.ts
+// hooks/useAmplifyData.ts - Versión simplificada
 import { generateClient } from 'aws-amplify/data';
+import { getCurrentUser } from 'aws-amplify/auth';
 import type { Schema } from '../amplify/data/resource';
+import { PlatoCarrito } from '@/context/contextCarrito';
 
 // Generar el cliente tipado
 const client = generateClient<Schema>();
 
 export const useAmplifyData = () => {
 
-    // Universidades
-    const crearUniversidad = async (universidad: { nombre: string; ciudad: string; imagen?: string }) => {
+    // Función helper para obtener el usuario actual
+    const obtenerUsuarioActual = async () => {
         try {
-            const { data } = await client.models.Universidad.create(universidad);
-            return { success: true, data };
+            const user = await getCurrentUser();
+            return {
+                userId: user.userId,
+                email: user.signInDetails?.loginId || '',
+            };
         } catch (error) {
-            console.error('Error creando universidad:', error);
-            return { success: false, error };
+            console.warn('No hay usuario autenticado');
+            return null;
         }
     };
 
-    const obtenerUniversidades = async () => {
+    // =============== PEDIDOS ===============
+    const crearPedido = async (carritoItems: PlatoCarrito[], total: number) => {
         try {
-            const { data } = await client.models.Universidad.list();
-            return { success: true, data };
-        } catch (error) {
-            console.error('Error obteniendo universidades:', error);
-            return { success: false, error };
-        }
-    };
+            const usuario = await obtenerUsuarioActual();
+            if (!usuario) {
+                return { success: false, error: 'Usuario no autenticado' };
+            }
 
-    // Restaurantes
-    const crearRestaurante = async (restaurante: {
-        nombre: string;
-        universidadId: string;
-        imagen?: string;
-        categorias?: string[];
-        calificacion?: number;
-        tiempoEntrega?: number;
-    }) => {
-        try {
-            const { data } = await client.models.Restaurante.create(restaurante);
-            return { success: true, data };
-        } catch (error) {
-            console.error('Error creando restaurante:', error);
-            return { success: false, error };
-        }
-    };
+            if (carritoItems.length === 0) {
+                return { success: false, error: 'El carrito está vacío' };
+            }
 
-    const obtenerRestaurantesPorUniversidad = async (universidadId: string) => {
-        try {
-            const { data } = await client.models.Restaurante.list({
-                filter: { universidadId: { eq: universidadId } }
+            // Obtener información del primer item para el restaurante
+            const primerItem = carritoItems[0];
+            const restauranteId = primerItem.idRestaurante.toString();
+
+            // Generar número de orden único
+            const numeroOrden = `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 4).toUpperCase()}`;
+
+            // Preparar items del pedido para guardar en JSON
+            const itemsPedido = carritoItems.map(item => ({
+                platoId: item.plato.idPlato,
+                platoNombre: item.plato.nombre,
+                platoDescripcion: item.plato.descripcion,
+                precioUnitario: item.plato.precio,
+                cantidad: item.cantidad,
+                comentarios: item.comentarios,
+                toppingsSeleccionados: item.toppingsSeleccionados.map(t => ({
+                    id: t.id,
+                    nombre: t.nombre,
+                    precio: t.precio || 0
+                })),
+                toppingsBaseRemocionados: item.toppingsBaseRemocionados,
+                precioTotal: item.precioTotal,
+                totalItem: item.precioTotal * item.cantidad,
+                idUnico: item.idUnico
+            }));
+
+            // Crear el pedido
+            const { data: pedido, errors } = await client.models.Pedido.create({
+                usuarioEmail: usuario.email,
+                restauranteId,
+                total,
+                estado: 'pendiente',
+                fechaPedido: new Date().toISOString(),
+                numeroOrden,
+                itemsPedido,
+                comentarios: carritoItems.map(item => item.comentarios).filter(Boolean).join('; ') || undefined,
             });
-            return { success: true, data };
+
+            if (errors) {
+                console.error('Errores creando pedido:', errors);
+                return { success: false, errors };
+            }
+
+            console.log('✅ Pedido creado exitosamente:', pedido);
+
+            return {
+                success: true,
+                data: pedido,
+                numeroOrden
+            };
+
         } catch (error) {
-            console.error('Error obteniendo restaurantes:', error);
-            return { success: false, error };
+            console.error('❌ Error creando pedido:', error);
+            return { success: false, error: 'Error interno del servidor' };
         }
     };
 
-    // Platos
-    const crearPlato = async (plato: {
-        nombre: string;
-        descripcion?: string;
-        precio: number;
-        categoria: string;
-        imagen?: string;
-        tipoPlato?: 'simple' | 'fijo' | 'mixto' | 'personalizable';
-        restauranteId: string;
-    }) => {
+    const obtenerPedidosUsuario = async (limite = 20) => {
         try {
-            const { data } = await client.models.Plato.create(plato);
-            return { success: true, data };
-        } catch (error) {
-            console.error('Error creando plato:', error);
-            return { success: false, error };
-        }
-    };
+            const usuario = await obtenerUsuarioActual();
+            if (!usuario) {
+                return { success: false, error: 'Usuario no autenticado' };
+            }
 
-    const obtenerPlatosPorRestaurante = async (restauranteId: string) => {
-        try {
-            const { data } = await client.models.Plato.list({
-                filter: { restauranteId: { eq: restauranteId } }
+            const { data, errors } = await client.models.Pedido.list({
+                filter: { usuarioEmail: { eq: usuario.email } },
+                limit: limite,
             });
-            return { success: true, data };
-        } catch (error) {
-            console.error('Error obteniendo platos:', error);
-            return { success: false, error };
-        }
-    };
 
-    // pedidos
-    const crearPedido = async (pedido: {
-        usuario: string;
-        restauranteId: string;
-        total: number;
-        estado?: 'pendiente' | 'preparando' | 'listo' | 'entregado';
-        comentarios?: string;
-        fechaPedido?: string;
-    }) => {
-        try {
-            const { data } = await client.models.Pedido.create({
-                ...pedido,
-                fechaPedido: pedido.fechaPedido || new Date().toISOString(),
-                estado: pedido.estado || 'pendiente'
-            });
-            return { success: true, data };
-        } catch (error) {
-            console.error('Error creando pedido:', error);
-            return { success: false, error };
-        }
-    };
+            if (errors) {
+                console.error('Errores obteniendo pedidos:', errors);
+                return { success: false, errors };
+            }
 
-    const obtenerPedidosUsuario = async (usuario: string) => {
-        try {
-            const { data } = await client.models.Pedido.list({
-                filter: { usuario: { eq: usuario } }
-            });
             return { success: true, data };
         } catch (error) {
             console.error('Error obteniendo pedidos:', error);
@@ -123,22 +116,94 @@ export const useAmplifyData = () => {
         }
     };
 
+    const actualizarEstadoPedido = async (
+        pedidoId: string,
+        nuevoEstado: 'pendiente' | 'preparando' | 'listo' | 'entregado' | 'cancelado'
+    ) => {
+        try {
+            const { data, errors } = await client.models.Pedido.update({
+                id: pedidoId,
+                estado: nuevoEstado,
+            });
+
+            if (errors) {
+                console.error('Errores actualizando pedido:', errors);
+                return { success: false, errors };
+            }
+
+            return { success: true, data };
+        } catch (error) {
+            console.error('Error actualizando estado del pedido:', error);
+            return { success: false, error };
+        }
+    };
+
+    // =============== DATOS BÁSICOS (SOLO LECTURA) ===============
+    const obtenerUniversidades = async () => {
+        try {
+            const { data, errors } = await client.models.Universidad.list();
+
+            if (errors) {
+                console.error('Errores obteniendo universidades:', errors);
+                return { success: false, errors };
+            }
+
+            return { success: true, data };
+        } catch (error) {
+            console.error('Error obteniendo universidades:', error);
+            return { success: false, error };
+        }
+    };
+
+    const obtenerRestaurantesPorUniversidad = async (universidadId: string) => {
+        try {
+            const { data, errors } = await client.models.Restaurante.list({
+                filter: { universidadId: { eq: universidadId } },
+            });
+
+            if (errors) {
+                console.error('Errores obteniendo restaurantes:', errors);
+                return { success: false, errors };
+            }
+
+            return { success: true, data };
+        } catch (error) {
+            console.error('Error obteniendo restaurantes:', error);
+            return { success: false, error };
+        }
+    };
+
+    const obtenerPlatosPorRestaurante = async (restauranteId: string) => {
+        try {
+            const { data, errors } = await client.models.Plato.list({
+                filter: { restauranteId: { eq: restauranteId } },
+            });
+
+            if (errors) {
+                console.error('Errores obteniendo platos:', errors);
+                return { success: false, errors };
+            }
+
+            return { success: true, data };
+        } catch (error) {
+            console.error('Error obteniendo platos:', error);
+            return { success: false, error };
+        }
+    };
+
     return {
-        // Universidades
-        crearUniversidad,
-        obtenerUniversidades,
-
-        // Restaurantes
-        crearRestaurante,
-        obtenerRestaurantesPorUniversidad,
-
-        // Platos
-        crearPlato,
-        obtenerPlatosPorRestaurante,
-
-        // Pedidos
+        // Funciones principales
         crearPedido,
         obtenerPedidosUsuario,
+        actualizarEstadoPedido,
+
+        // Funciones de consulta
+        obtenerUniversidades,
+        obtenerRestaurantesPorUniversidad,
+        obtenerPlatosPorRestaurante,
+
+        // Utilidades
+        obtenerUsuarioActual,
 
         // Cliente directo para operaciones avanzadas
         client,

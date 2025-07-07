@@ -8,7 +8,10 @@ const schema = a.schema({
       imagen: a.string(),
       restaurantes: a.hasMany('Restaurante', 'universidadId'),
     })
-    .authorization((allow) => [allow.guest()]),
+    .authorization((allow) => [
+      allow.guest().to(['read']),
+      allow.authenticated().to(['read']),
+    ]),
 
   Restaurante: a
     .model({
@@ -22,7 +25,10 @@ const schema = a.schema({
       platos: a.hasMany('Plato', 'restauranteId'),
       pedidos: a.hasMany('Pedido', 'restauranteId'),
     })
-    .authorization((allow) => [allow.guest()]),
+    .authorization((allow) => [
+      allow.guest().to(['read']),
+      allow.authenticated().to(['read']),
+    ]),
 
   Plato: a
     .model({
@@ -36,7 +42,10 @@ const schema = a.schema({
       restaurante: a.belongsTo('Restaurante', 'restauranteId'),
       toppings: a.hasMany('Topping', 'platoId'),
     })
-    .authorization((allow) => [allow.guest()]),
+    .authorization((allow) => [
+      allow.guest().to(['read']),
+      allow.authenticated().to(['read']),
+    ]),
 
   Topping: a
     .model({
@@ -47,19 +56,27 @@ const schema = a.schema({
       platoId: a.id().required(),
       plato: a.belongsTo('Plato', 'platoId'),
     })
-    .authorization((allow) => [allow.guest()]),
+    .authorization((allow) => [
+      allow.guest().to(['read']),
+      allow.authenticated().to(['read']),
+    ]),
 
   Pedido: a
     .model({
-      usuario: a.string().required(),
+      usuarioEmail: a.string().required(),
       restauranteId: a.id().required(),
       restaurante: a.belongsTo('Restaurante', 'restauranteId'),
       total: a.integer().required(),
-      estado: a.enum(['pendiente', 'preparando', 'listo', 'entregado']),
+      estado: a.enum(['pendiente', 'preparando', 'listo', 'entregado', 'cancelado']),
       comentarios: a.string(),
       fechaPedido: a.datetime(),
+      numeroOrden: a.string(),
+      // Información del pedido en JSON para simplicidad
+      itemsPedido: a.json(), // Array de items con toda la info
     })
-    .authorization((allow) => [allow.owner()]),
+    .authorization((allow) => [
+      allow.authenticated().to(['read', 'create', 'update']),
+    ]),
 });
 
 export type Schema = ClientSchema<typeof schema>;
@@ -67,7 +84,7 @@ export type Schema = ClientSchema<typeof schema>;
 export const data = defineData({
   schema,
   authorizationModes: {
-    defaultAuthorizationMode: 'userPool',
+    defaultAuthorizationMode: 'apiKey',
     apiKeyAuthorizationMode: {
       expiresInDays: 30,
     },

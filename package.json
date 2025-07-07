@@ -6,7 +6,15 @@
     "start": "expo start --no-dev",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "expo start --web"
+    "web": "expo start --web",
+    "setup": "setup-unifood.bat",
+    "setup:ps": "powershell -ExecutionPolicy Bypass -File setup-unifood.ps1",
+    "amplify:sandbox": "npx ampx sandbox",
+    "amplify:deploy": "npx ampx sandbox deploy",
+    "amplify:studio": "npx ampx studio",
+    "amplify:console": "npx ampx console",
+    "amplify:delete": "npx ampx sandbox delete",
+    "amplify:reset": "if exist .amplify rmdir /s /q .amplify && if exist amplify_outputs.json del amplify_outputs.json && npm run amplify:sandbox"
   },
   "dependencies": {
     "@aws-amplify/react-native": "^1.1.10",

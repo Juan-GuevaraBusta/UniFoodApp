@@ -1,172 +1,149 @@
 // hooks/useAuth.ts
 import { useState, useEffect } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import {
+    signUp,
+    signIn,
+    signOut,
+    getCurrentUser,
+    confirmSignUp,
+    resendSignUpCode,
+    fetchAuthSession
+} from 'aws-amplify/auth';
 import { getUserRoleByEmail, type UserRole } from '@/constants/userRoles';
 
 export interface UserData {
     email: string;
     role: UserRole;
     isAuthenticated: boolean;
+    userId?: string;
 }
 
 export const useAuth = () => {
     const [userData, setUserData] = useState<UserData | null>(null);
     const [isLoading, setIsLoading] = useState(true);
 
-    // Verificar si hay usuario logueado al iniciar
     useEffect(() => {
         checkAuthState();
     }, []);
 
     const checkAuthState = async () => {
         try {
-            const savedEmail = await AsyncStorage.getItem('userEmail');
-            const isLoggedIn = await AsyncStorage.getItem('isLoggedIn');
+            console.log('🔍 Verificando configuración de Amplify...');
+            const session = await fetchAuthSession();
+            console.log('📊 Session:', session);
 
-            if (savedEmail && isLoggedIn === 'true') {
-                const role = getUserRoleByEmail(savedEmail);
-                setUserData({
-                    email: savedEmail,
-                    role,
-                    isAuthenticated: true,
-                });
-            } else {
-                setUserData(null);
-            }
-        } catch (error) {
-            console.log('Error checking auth state:', error);
-            setUserData(null);
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    // Registro de usuarios (simplificado - solo guarda localmente)
-    const registrarUsuario = async (email: string, password: string) => {
-        try {
-            setIsLoading(true);
-
-            // Simulamos validación
-            if (password.length < 8) {
-                return {
-                    success: false,
-                    error: 'La contraseña debe tener al menos 8 caracteres'
-                };
-            }
-
-            // Guardar credenciales localmente (en producción usarías Amplify/Firebase)
-            await AsyncStorage.setItem('userEmail', email);
-            await AsyncStorage.setItem('userPassword', password); // Solo para demo
-
-            const role = getUserRoleByEmail(email);
-
-            return {
-                success: true,
-                message: 'Usuario registrado correctamente',
-                role
-            };
-        } catch (error: any) {
-            console.error('Error en registro:', error);
-            return {
-                success: false,
-                error: 'Error al registrar usuario'
-            };
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    // Login de usuarios
-    const iniciarSesion = async (email: string, password: string) => {
-        try {
-            setIsLoading(true);
-
-            // Verificar credenciales localmente (en producción usarías Amplify/Firebase)
-            const savedEmail = await AsyncStorage.getItem('userEmail');
-            const savedPassword = await AsyncStorage.getItem('userPassword');
-
-            if (savedEmail === email && savedPassword === password) {
-                // Login exitoso
-                await AsyncStorage.setItem('isLoggedIn', 'true');
-
+            if (session.tokens) {
+                const user = await getCurrentUser();
+                const email = user.signInDetails?.loginId || '';
                 const role = getUserRoleByEmail(email);
 
                 setUserData({
                     email,
                     role,
                     isAuthenticated: true,
+                    userId: user.userId,
                 });
-
-                return {
-                    success: true,
-                    message: 'Sesión iniciada correctamente',
-                    role
-                };
             } else {
-                return {
-                    success: false,
-                    error: 'Email o contraseña incorrectos'
-                };
+                setUserData(null);
             }
+        } catch (error) {
+            setUserData(null);
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const registrarUsuario = async (email: string, password: string) => {
+        try {
+            setIsLoading(true);
+            console.log('📝 Registrando usuario:', email);
+
+            console.log('🔍 Datos enviados a signUp:');
+            console.log('Email:', email);
+            console.log('Password length:', password.length);
+            console.log('Password chars:', password.split('').map(c => c.charCodeAt(0)));
+
+            const result = await signUp({
+                username: email,
+                password,
+                options: {
+                    userAttributes: { email },
+                },
+            });
+
+            console.log('✅ Registro exitoso:', result);
+
+            const role = getUserRoleByEmail(email);
+
+            return {
+                success: true,
+                message: 'Código de confirmación enviado a tu email',
+                role,
+                needsConfirmation: true,
+                userId: result.userId
+            };
+
         } catch (error: any) {
-            console.error('Error en login:', error);
+            console.error('❌ Error en registro:', error);
+
+            let errorMessage = 'Error al registrar usuario';
+            if (error.name === 'UsernameExistsException') {
+                errorMessage = 'Este email ya está registrado';
+            }
+
+            return { success: false, error: errorMessage };
+        } finally {
+            setIsLoading(false);
+        }
+    };
+
+    const iniciarSesion = async (email: string, password: string) => {
+        try {
+            setIsLoading(true);
+            console.log('🔐 Intentando login con:', email);
+
+            const result = await signIn({
+                username: email,
+                password,
+            });
+
+            console.log('✅ Login exitoso:', result);
+
+            // Solo retornar éxito
+            return {
+                success: true,
+                message: 'Login exitoso',
+                role: getUserRoleByEmail(email)
+            };
+
+        } catch (error: any) {
+            console.error('❌ Error específico:', error);
             return {
                 success: false,
-                error: 'Error al iniciar sesión'
+                error: error.message || 'Error desconocido'
             };
         } finally {
             setIsLoading(false);
         }
     };
 
-    // Logout
     const cerrarSesion = async () => {
         try {
-            setIsLoading(true);
-            await AsyncStorage.removeItem('isLoggedIn');
+            await signOut();
             setUserData(null);
             return { success: true, message: 'Sesión cerrada' };
         } catch (error: any) {
-            console.error('Error en logout:', error);
-            return { success: false, error: error.message };
-        } finally {
-            setIsLoading(false);
+            return { success: false, error: 'Error al cerrar sesión' };
         }
     };
 
-    // Funciones de verificación de rol
-    const getUserRole = (): UserRole | null => {
-        return userData?.role || null;
-    };
-
-    const isStudent = (): boolean => {
-        return userData?.role === 'student';
-    };
-
-    const isRestaurantOwner = (): boolean => {
-        return userData?.role === 'restaurant_owner';
-    };
-
-    const isAdmin = (): boolean => {
-        return userData?.role === 'admin';
-    };
-
     return {
-        // Estados
         userData,
         isLoading,
         isAuthenticated: userData?.isAuthenticated || false,
-
-        // Funciones de autenticación
         registrarUsuario,
         iniciarSesion,
         cerrarSesion,
         checkAuthState,
-
-        // Funciones de rol
-        getUserRole,
-        isStudent,
-        isRestaurantOwner,
-        isAdmin,
     };
 };

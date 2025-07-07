@@ -10,23 +10,7 @@ import { CarritoProvider } from "@/context/contextCarrito";
 import { Amplify } from 'aws-amplify';
 import outputs from '../amplify_outputs.json';
 
-Amplify.configure(outputs);
-
-try {
-  // Importar dinámicamente para mejor debugging
-  const outputs = require('../amplify_outputs.json');
-
-  console.log('📄 Archivo amplify_outputs.json cargado:', !!outputs);
-  console.log('🔐 Auth config existe:', !!outputs.auth);
-  console.log('🗄️ Data config existe:', !!outputs.data);
-
-  // Configurar Amplify
-  Amplify.configure(outputs);
-
-  console.log('✅ Amplify configurado exitosamente');
-} catch (error) {
-  console.error('❌ Error configurando Amplify:', error);
-}
+Amplify.configure(outputs)
 
 SplashScreen.preventAutoHideAsync();
 

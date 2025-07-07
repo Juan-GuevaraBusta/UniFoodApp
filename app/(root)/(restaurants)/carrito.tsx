@@ -1,15 +1,17 @@
 /* eslint-disable prettier/prettier */
-/* eslint-disable prettier/prettier */
-// (root)/(restaurants)/carrito.tsx
-import { Text, TouchableOpacity, View, ScrollView, Image } from "react-native";
+// app/(root)/(restaurants)/carrito.tsx - Actualizado con Amplify
+import { Text, TouchableOpacity, View, ScrollView, Image, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from 'expo-router';
 import { useCarrito } from '@/context/contextCarrito';
+import { useAmplifyData } from "@/hooks/useAmplifyData";
+import { useState } from 'react';
 import { Stack } from "expo-router";
 import { Plus, Minus, Trash2, ArrowLeft } from "lucide-react-native";
-import { useAmplifyData } from "@/hooks/useAmplifyData";
 
 const Carrito = () => {
+  const [isProcessing, setIsProcessing] = useState(false);
+
   const {
     carrito,
     actualizarCantidadCarrito,
@@ -19,7 +21,6 @@ const Carrito = () => {
     limpiarCarrito
   } = useCarrito();
 
-  //Guardar pedidos en la base de datos
   const { crearPedido } = useAmplifyData();
 
   // Función para formatear precio
@@ -33,10 +34,74 @@ const Carrito = () => {
   const total = subtotal + tarifaServicio;
 
   // Función para proceder al pago
-  const procederAlPago = () => {
-    // Aquí iría la lógica de pago
-    // Por ahora solo navegamos a una pantalla de pago (que crearías después)
-    // router.push('/(root)/pago');
+  const procederAlPago = async () => {
+    if (carrito.length === 0) {
+      Alert.alert('Error', 'El carrito está vacío');
+      return;
+    }
+
+    Alert.alert(
+      'Confirmar pedido',
+      `¿Estás seguro de realizar este pedido por ${formatearPrecio(total)}?`,
+      [
+        {
+          text: 'Cancelar',
+          style: 'cancel'
+        },
+        {
+          text: 'Confirmar',
+          onPress: confirmarPedido
+        }
+      ]
+    );
+  };
+
+  const confirmarPedido = async () => {
+    setIsProcessing(true);
+
+    try {
+      console.log('🛒 Procesando pedido con carrito:', carrito);
+
+      const resultado = await crearPedido(carrito, total);
+
+      if (resultado.success) {
+        Alert.alert(
+          '¡Pedido realizado!',
+          `Tu pedido #${resultado.numeroOrden} ha sido enviado al restaurante. Te notificaremos cuando esté listo.`,
+          [
+            {
+              text: 'Ver mis pedidos',
+              onPress: () => {
+                limpiarCarrito();
+                // Aquí podrías navegar a una pantalla de "Mis Pedidos"
+                router.replace('/(root)/(tabs)/home');
+              }
+            },
+            {
+              text: 'Continuar comprando',
+              onPress: () => {
+                limpiarCarrito();
+                router.replace('/(root)/(tabs)/home');
+              }
+            }
+          ]
+        );
+      } else {
+        console.error('❌ Error en el pedido:', resultado.error);
+        Alert.alert(
+          'Error al procesar pedido',
+          resultado.error || 'Ha ocurrido un error inesperado. Intenta nuevamente.'
+        );
+      }
+    } catch (error) {
+      console.error('❌ Error inesperado:', error);
+      Alert.alert(
+        'Error',
+        'Ha ocurrido un error inesperado. Verifica tu conexión e intenta nuevamente.'
+      );
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   if (carrito.length === 0) {
@@ -175,7 +240,7 @@ const Carrito = () => {
                 </View>
               )}
 
-              {/* AGREGAR INFO DEL PEDIDO */}
+              {/* Info del restaurante */}
               {carrito.length > 0 && (
                 <View className="items-center mt-1">
                   <Text className="text-gray-600 text-xs font-JakartaLight">
@@ -183,14 +248,6 @@ const Carrito = () => {
                   </Text>
                 </View>
               )}
-              <View className="flex-row mb-3">
-                <View className="flex-1">
-                  {/* AGREGAR ID DEL PEDIDO */}
-                  <Text className="text-gray-500 font-JakartaLight text-xs mt-1">
-                    ID: {item.idUnico}
-                  </Text>
-                </View>
-              </View>
 
               {/* Comentarios */}
               {item.comentarios && item.comentarios.trim() !== '' && (
@@ -283,7 +340,9 @@ const Carrito = () => {
           {/* Botón de proceder al pago */}
           <TouchableOpacity
             onPress={procederAlPago}
-            className="bg-[#132e3c] py-4 rounded-xl flex items-center justify-center"
+            disabled={isProcessing}
+            className={`py-4 rounded-xl flex items-center justify-center ${isProcessing ? 'bg-gray-400' : 'bg-[#132e3c]'
+              }`}
             style={{
               shadowColor: '#000',
               shadowOffset: { width: 0, height: 2 },
@@ -293,7 +352,7 @@ const Carrito = () => {
             }}
           >
             <Text className="text-white font-JakartaBold text-lg">
-              Proceder al pago - {formatearPrecio(total)}
+              {isProcessing ? 'Procesando...' : `Realizar pedido - ${formatearPrecio(total)}`}
             </Text>
           </TouchableOpacity>
         </View>

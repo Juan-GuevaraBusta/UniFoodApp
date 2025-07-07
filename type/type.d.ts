@@ -1,58 +1,6 @@
 import { TextInputProps, TouchableOpacityProps } from "react-native";
 
-declare interface Driver {
-    driver_id: number;
-    first_name: string;
-    last_name: string;
-    profile_image_url: string;
-    car_image_url: string;
-    car_seats: number;
-    rating: number;
-}
-
-declare interface MarkerData {
-    latitude: number;
-    longitude: number;
-    id: number;
-    title: string;
-    profile_image_url: string;
-    car_image_url: string;
-    car_seats: number;
-    rating: number;
-    first_name: string;
-    last_name: string;
-    time?: number;
-    price?: string;
-}
-
-declare interface MapProps {
-    destinationLatitude?: number;
-    destinationLongitude?: number;
-    onDriverTimesCalculated?: (driversWithTimes: MarkerData[]) => void;
-    selectedDriver?: number | null;
-    onMapReady?: () => void;
-}
-
-declare interface Ride {
-    origin_address: string;
-    destination_address: string;
-    origin_latitude: number;
-    origin_longitude: number;
-    destination_latitude: number;
-    destination_longitude: number;
-    ride_time: number;
-    fare_price: number;
-    payment_status: string;
-    driver_id: number;
-    user_email: string;
-    created_at: string;
-    driver: {
-        first_name: string;
-        last_name: string;
-        car_seats: number;
-    };
-}
-
+// =============== COMPONENTES UI ===============
 declare interface ButtonProps extends TouchableOpacityProps {
     title: string;
     bgVariant?: "primary" | "secondary" | "danger" | "outline" | "success";
@@ -60,22 +8,6 @@ declare interface ButtonProps extends TouchableOpacityProps {
     IconLeft?: React.ComponentType<any>;
     IconRight?: React.ComponentType<any>;
     className?: string;
-}
-
-declare interface GoogleInputProps {
-    icon?: string;
-    initialLocation?: string;
-    containerStyle?: string;
-    textInputBackgroundColor?: string;
-    handlePress: ({
-        latitude,
-        longitude,
-        address,
-    }: {
-        latitude: number;
-        longitude: number;
-        address: string;
-    }) => void;
 }
 
 declare interface InputFieldProps extends TextInputProps {
@@ -89,51 +21,104 @@ declare interface InputFieldProps extends TextInputProps {
     className?: string;
 }
 
-declare interface PaymentProps {
-    fullName: string;
+// =============== DATOS UNIFOOD ===============
+declare interface Universidad {
+    id: number;
+    nombre: string;
+    ciudad: string;
+    imagen: any;
+}
+
+declare interface Restaurante {
+    idRestaurante: number;
+    idUniversidad: number;
+    nombreRestaurante: string;
+    imagen: any;
+    categorias: string[];
+    calificacionRestaurante: number;
+    tiempoEntrega: number;
+    menu: Plato[];
+}
+
+declare interface Plato {
+    idPlato: number;
+    nombre: string;
+    descripcion: string;
+    precio: number;
+    categoria: string;
+    imagen: any;
+    tipoPlato: 'simple' | 'fijo' | 'mixto' | 'personalizable';
+    toppingsBase: Topping[];
+    toppingsDisponibles: Topping[];
+}
+
+declare interface Topping {
+    id: number;
+    nombre: string;
+    precio?: number;
+    removible?: boolean;
+    categoria?: string;
+}
+
+declare interface PlatoCarrito {
+    idRestaurante: number;
+    nombreRestaurante: string;
+    nombreUniversidad: string;
+    plato: Plato;
+    cantidad: number;
+    comentarios: string;
+    toppingsSeleccionados: Topping[];
+    toppingsBaseRemocionados: number[];
+    precioTotal: number;
+    idUnico: string;
+    fechaAgregado: Date;
+}
+
+declare interface Pedido {
+    id: string;
+    usuarioEmail: string;
+    restauranteId: string;
+    total: number;
+    estado: 'pendiente' | 'preparando' | 'listo' | 'entregado' | 'cancelado';
+    comentarios?: string;
+    fechaPedido: string;
+    numeroOrden: string;
+    itemsPedido: ItemPedido[];
+}
+
+declare interface ItemPedido {
+    platoId: number;
+    platoNombre: string;
+    platoDescripcion?: string;
+    precioUnitario: number;
+    cantidad: number;
+    comentarios?: string;
+    toppingsSeleccionados: ToppingSeleccionado[];
+    toppingsBaseRemocionados: number[];
+    precioTotal: number;
+    totalItem: number;
+    idUnico: string;
+}
+
+declare interface ToppingSeleccionado {
+    id: number;
+    nombre: string;
+    precio: number;
+}
+
+// =============== AUTENTICACIÓN ===============
+declare interface UserData {
     email: string;
-    amount: string;
-    driverId: number;
-    rideTime: number;
+    role: 'student' | 'restaurant_owner' | 'admin';
+    isAuthenticated: boolean;
+    userId?: string;
 }
 
-declare interface LocationStore {
-    userLatitude: number | null;
-    userLongitude: number | null;
-    userAddress: string | null;
-    destinationLatitude: number | null;
-    destinationLongitude: number | null;
-    destinationAddress: string | null;
-    setUserLocation: ({
-        latitude,
-        longitude,
-        address,
-    }: {
-        latitude: number;
-        longitude: number;
-        address: string;
-    }) => void;
-    setDestinationLocation: ({
-        latitude,
-        longitude,
-        address,
-    }: {
-        latitude: number;
-        longitude: number;
-        address: string;
-    }) => void;
-}
-
-declare interface DriverStore {
-    drivers: MarkerData[];
-    selectedDriver: number | null;
-    setSelectedDriver: (driverId: number) => void;
-    setDrivers: (drivers: MarkerData[]) => void;
-    clearSelectedDriver: () => void;
-}
-
-declare interface DriverCardProps {
-    item: MarkerData;
-    selected: number;
-    setSelected: () => void;
+declare interface AuthResult {
+    success: boolean;
+    message?: string;
+    error?: string;
+    role?: 'student' | 'restaurant_owner' | 'admin';
+    needsConfirmation?: boolean;
+    userId?: string;
 }
