@@ -63,7 +63,7 @@ const inscribete = () => {
     // Validación fuerte de contraseña
     if (!passwordValidation.isValid) {
       Alert.alert(
-        "Contraseña no válida",
+        "Contraseña no válida", 
         passwordValidation.errors.join('\n')
       );
       return false;
@@ -92,7 +92,7 @@ const inscribete = () => {
           [
             {
               text: "Confirmar Email",
-              onPress: () => router.push(`/(auth)/confirmarEmail?email=${encodeURIComponent(email.trim())}`),
+              onPress: () => router.push(`/(auth)/testAuth`),
             },
           ]
         );
@@ -150,17 +150,20 @@ const inscribete = () => {
 
           {/* Mostrar tipo de cuenta detectado */}
           {email.includes("@") && (
-            <View className={`mb-6 p-4 rounded-xl ${userRole === 'admin' ? 'bg-purple-50' :
-                userRole === 'restaurant_owner' ? 'bg-orange-50' : 'bg-blue-50'
+            <View className={`mb-6 p-4 rounded-xl ${
+              userRole === 'admin' ? 'bg-purple-50' :
+              userRole === 'restaurant_owner' ? 'bg-orange-50' : 'bg-blue-50'
+            }`}>
+              <Text className={`font-JakartaBold text-sm mb-1 ${
+                userRole === 'admin' ? 'text-purple-800' :
+                userRole === 'restaurant_owner' ? 'text-orange-800' : 'text-blue-800'
               }`}>
-              <Text className={`font-JakartaBold text-sm mb-1 ${userRole === 'admin' ? 'text-purple-800' :
-                  userRole === 'restaurant_owner' ? 'text-orange-800' : 'text-blue-800'
-                }`}>
                 Tipo de cuenta detectado:
               </Text>
-              <Text className={`font-JakartaMedium text-base ${userRole === 'admin' ? 'text-purple-700' :
-                  userRole === 'restaurant_owner' ? 'text-orange-700' : 'text-blue-700'
-                }`}>
+              <Text className={`font-JakartaMedium text-base ${
+                userRole === 'admin' ? 'text-purple-700' :
+                userRole === 'restaurant_owner' ? 'text-orange-700' : 'text-blue-700'
+              }`}>
                 {roleDisplayName}
                 {userRole === 'admin' && ' 👨‍💼'}
                 {userRole === 'restaurant_owner' && ' 🍕'}
@@ -278,10 +281,11 @@ const inscribete = () => {
                   ) : (
                     <X size={14} color="#dc2626" />
                   )}
-                  <Text className={`font-JakartaMedium text-xs ml-2 ${passwordValidation.requirements[key as keyof typeof passwordValidation.requirements]
-                      ? 'text-green-600'
+                  <Text className={`font-JakartaMedium text-xs ml-2 ${
+                    passwordValidation.requirements[key as keyof typeof passwordValidation.requirements] 
+                      ? 'text-green-600' 
                       : 'text-red-600'
-                    }`}>
+                  }`}>
                     {label}
                   </Text>
                 </View>
@@ -293,10 +297,11 @@ const inscribete = () => {
           <TouchableOpacity
             onPress={handleRegister}
             disabled={isLoading || !passwordValidation.isValid || password !== confirmPassword}
-            className={`py-4 rounded-xl mb-6 ${isLoading || !passwordValidation.isValid || password !== confirmPassword
-                ? "bg-gray-300"
+            className={`py-4 rounded-xl mb-6 ${
+              isLoading || !passwordValidation.isValid || password !== confirmPassword
+                ? "bg-gray-300" 
                 : "bg-[#132e3c]"
-              }`}
+            }`}
             style={{
               shadowColor: '#000',
               shadowOffset: { width: 0, height: 2 },
@@ -313,10 +318,11 @@ const inscribete = () => {
                 </Text>
               </View>
             ) : (
-              <Text className={`font-JakartaBold text-lg text-center ${!passwordValidation.isValid || password !== confirmPassword
+              <Text className={`font-JakartaBold text-lg text-center ${
+                !passwordValidation.isValid || password !== confirmPassword
                   ? 'text-gray-500'
                   : 'text-white'
-                }`}>
+              }`}>
                 Crear Cuenta
               </Text>
             )}

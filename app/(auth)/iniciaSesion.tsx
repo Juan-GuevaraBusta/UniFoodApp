@@ -4,7 +4,7 @@ import { Text, View, TextInput, TouchableOpacity, Alert, ScrollView, ActivityInd
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { useAuth } from "@/hooks/useAuth";
-import { getRoleRedirectPath, getRoleDisplayName } from "@/constants/userRoles";
+import { getRoleRedirectPath, getRoleDisplayName, UserRole } from "@/constants/userRoles";
 import { Eye, EyeOff, Mail, Lock } from "lucide-react-native";
 
 const iniciaSesion = () => {
@@ -42,9 +42,13 @@ const iniciaSesion = () => {
 
       console.log('🧪 DEBUGGING - Resultado completo:', result);
 
-      if (result.success && result.role) {
-        const roleDisplayName = getRoleDisplayName(result.role);
-        const redirectPath = getRoleRedirectPath(result.role);
+      if (
+        result.success &&
+        "role" in result &&
+        typeof result.role === "string"
+      ) {
+        const roleDisplayName = getRoleDisplayName(result.role as UserRole);
+        const redirectPath = getRoleRedirectPath(result.role as UserRole);
 
         Alert.alert(
           "¡Bienvenido!",

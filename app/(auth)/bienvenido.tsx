@@ -16,7 +16,7 @@ const MenuInicio = () => {
         <SafeAreaView className="flex h-full items-center justify-between bg-white">
             <TouchableOpacity
                 onPress={() => {
-                    router.replace('/(auth)/iniciaSesion');
+                    router.replace('/(root)/(tabs)/home');
                 }}
                 className="w-full flex justify-end items-end p-5"
             >
@@ -57,7 +57,7 @@ const MenuInicio = () => {
                 </Swiper>
             <BotonCustom
                 title={isLastSlide ? "¡Empieza ya!" : "Siguiente"}
-                onPress={() => isLastSlide ? router.replace('/(auth)/iniciaSesion') : swiperRef.current?.scrollBy(1)}
+                onPress={() => isLastSlide ? router.replace('/(root)/(tabs)/home') : swiperRef.current?.scrollBy(1)}
                 className="w-11/12 mt-10"
             />
         </SafeAreaView>

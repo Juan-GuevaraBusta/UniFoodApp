@@ -1,3 +1,8 @@
+import 'react-native-get-random-values';
+import { Amplify } from 'aws-amplify';
+import outputs from '../amplify_outputs.json';
+Amplify.configure(outputs)
+
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
@@ -7,10 +12,9 @@ import * as SplashScreen from "expo-splash-screen";
 import { useEffect, useState } from "react";
 import { View, Image } from "react-native";
 import { CarritoProvider } from "@/context/contextCarrito";
-import { Amplify } from 'aws-amplify';
-import outputs from '../amplify_outputs.json';
 
-Amplify.configure(outputs)
+
+
 
 SplashScreen.preventAutoHideAsync();
 
