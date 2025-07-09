@@ -38,11 +38,11 @@ const ConfirmarEmail = () => {
             if (isSignUpComplete) {
                 Alert.alert(
                     "¡Cuenta confirmada!",
-                    "Tu cuenta ha sido verificada exitosamente. Ahora puedes iniciar sesión.",
+                    "¿Bienvenido a uniFood!",
                     [
                         {
-                            text: "Iniciar Sesión",
-                            onPress: () => router.replace("/(auth)/iniciaSesion"),
+                            text: "Continuar",
+                            onPress: () => router.replace("/(root)/(tabs)/home"),
                         },
                     ]
                 );

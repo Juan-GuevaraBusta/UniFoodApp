@@ -23,6 +23,10 @@
         "image": "./assets/images/splash.png",
         "resizeMode": "contain",
         "backgroundColor": "#ffffff"
+      },
+      "bundleIdentifier": "com.ybusta.unifood",
+      "infoPlist": {
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
@@ -52,6 +56,12 @@
       "ios",
       "android",
       "web"
-    ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "c7f383b9-61dd-4f26-a658-162157761c08"
+      }
+    }
   }
 }
