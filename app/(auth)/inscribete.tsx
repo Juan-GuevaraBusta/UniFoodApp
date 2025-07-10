@@ -88,11 +88,11 @@ const inscribete = () => {
       if (result.success) {
         Alert.alert(
           "¡Registro exitoso!",
-          `Te hemos enviado un código de confirmación a tu email. Tu cuenta será de tipo: ${roleDisplayName}`,
+          `Te hemos enviado un código de confirmación a tu email.`,
           [
             {
               text: "Confirmar Email",
-              onPress: () => router.push(`/(auth)/testAuth`),
+              onPress: () => router.push(`/(auth)/confirmarEmail?email=${encodeURIComponent(email.trim())}`),
             },
           ]
         );

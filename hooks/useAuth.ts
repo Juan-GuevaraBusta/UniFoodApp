@@ -1,6 +1,7 @@
 // hooks/useAuth.ts - Basado en documentación oficial Amplify Gen 2
 import { useState } from 'react';
 import { signUp, signIn, confirmSignUp, signOut, getCurrentUser } from 'aws-amplify/auth';
+import { getUserRoleByEmail } from '@/constants/userRoles';
 
 export interface AuthUser {
     username: string;
@@ -35,6 +36,7 @@ export const useAuth = () => {
                 message: 'Usuario registrado. Revisa tu email para confirmar.',
                 needsConfirmation: !isSignUpComplete,
                 userId,
+                email, // ← AGREGAMOS EL EMAIL PARA PASARLO A CONFIRMACIÓN
             };
 
         } catch (error: any) {
@@ -48,7 +50,7 @@ export const useAuth = () => {
         }
     };
 
-    // CONFIRMACIÓN - Basado en docs oficiales
+    // CONFIRMACIÓN - MEJORADA para ir directo al menú
     const confirmarUsuario = async (email: string, confirmationCode: string) => {
         try {
             setIsLoading(true);
@@ -60,6 +62,40 @@ export const useAuth = () => {
             });
 
             console.log('✅ Confirmación exitosa:', { isSignUpComplete, nextStep });
+
+            if (isSignUpComplete) {
+                // ✅ DESPUÉS DE CONFIRMAR, HACER LOGIN AUTOMÁTICO
+                console.log('🔐 Haciendo login automático después de confirmación...');
+
+                // Obtener información del usuario
+                try {
+                    const currentUser = await getCurrentUser();
+                    const role = getUserRoleByEmail(email);
+
+                    const authUser: AuthUser = {
+                        username: currentUser.username,
+                        email: email,
+                        isAuthenticated: true,
+                    };
+
+                    setUser(authUser);
+
+                    return {
+                        success: true,
+                        message: 'Usuario confirmado e iniciado sesión exitosamente',
+                        user: authUser,
+                        role,
+                        autoLogin: true
+                    };
+                } catch (loginError) {
+                    // Si no puede hacer login automático, solo confirmar
+                    return {
+                        success: true,
+                        message: 'Usuario confirmado exitosamente. Por favor inicia sesión.',
+                        needsLogin: true
+                    };
+                }
+            }
 
             return {
                 success: true,
@@ -77,29 +113,28 @@ export const useAuth = () => {
         }
     };
 
-    // LOGIN - Basado en docs oficiales + fixes del issue
+    // LOGIN - Con mejor manejo de confirmación
     const iniciarSesion = async (email: string, password: string) => {
         try {
             setIsLoading(true);
             console.log('🔐 Iniciando sesión:', email);
 
-            // FIX: Normalizar email
             const username = email.toLowerCase().trim();
 
             const { isSignedIn, nextStep } = await signIn({
                 username,
                 password,
                 options: {
-                    // FIX: Especificar authFlowType explícitamente
-                    authFlowType: 'USER_SRP_AUTH', // Recomendado por AWS
+                    authFlowType: 'USER_SRP_AUTH',
                 },
             });
 
             console.log('✅ Resultado signIn:', { isSignedIn, nextStep });
 
             if (isSignedIn) {
-                // Obtener información del usuario
                 const currentUser = await getCurrentUser();
+                const role = getUserRoleByEmail(email);
+
                 console.log('👤 Usuario actual:', currentUser);
 
                 const authUser: AuthUser = {
@@ -114,16 +149,15 @@ export const useAuth = () => {
                     success: true,
                     message: 'Inicio de sesión exitoso',
                     user: authUser,
+                    role,
                 };
             } else {
-                // Manejar pasos adicionales
-                console.log('⚠️ Login incompleto:', nextStep);
-
                 if (nextStep?.signInStep === 'CONFIRM_SIGN_UP') {
                     return {
                         success: false,
                         error: 'Debes confirmar tu email antes de iniciar sesión',
                         needsConfirmation: true,
+                        email: username, // ← PASAMOS EL EMAIL
                     };
                 }
 
@@ -136,7 +170,6 @@ export const useAuth = () => {
         } catch (error: any) {
             console.error('❌ Error en login:', error);
 
-            // Manejo específico de errores conocidos
             let errorMessage = error.message || 'Error al iniciar sesión';
 
             switch (error.name) {
@@ -152,6 +185,7 @@ export const useAuth = () => {
                         success: false,
                         error: errorMessage,
                         needsConfirmation: true,
+                        email: email.toLowerCase().trim(), // ← PASAMOS EL EMAIL
                     };
                 case 'TooManyRequestsException':
                     errorMessage = 'Demasiados intentos. Espera un momento';

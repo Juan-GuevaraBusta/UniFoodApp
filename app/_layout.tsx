@@ -1,7 +1,28 @@
 import 'react-native-get-random-values';
+
+// Importación condicional de Amplify para evitar errores en build
+let outputs: any = {};
+try {
+  outputs = require('../amplify_outputs.json');
+} catch (error) {
+  console.warn('amplify_outputs.json not found, using default config');
+  outputs = {
+    auth: {
+      user_pool_id: 'dummy',
+      user_pool_client_id: 'dummy',
+      identity_pool_id: 'dummy',
+      password_policy: {}
+    },
+    data: {
+      url: 'dummy',
+      api_key: 'dummy',
+      default_authorization_type: 'API_KEY'
+    }
+  };
+}
+
 import { Amplify } from 'aws-amplify';
-import outputs from '../amplify_outputs.json';
-Amplify.configure(outputs)
+Amplify.configure(outputs);
 
 import { useFonts } from "expo-font";
 import { Stack } from "expo-router";
@@ -12,9 +33,6 @@ import * as SplashScreen from "expo-splash-screen";
 import { useEffect, useState } from "react";
 import { View, Image } from "react-native";
 import { CarritoProvider } from "@/context/contextCarrito";
-
-
-
 
 SplashScreen.preventAutoHideAsync();
 

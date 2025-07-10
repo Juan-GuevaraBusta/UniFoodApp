@@ -3,7 +3,9 @@ import { useState } from "react";
 import { Text, View, TextInput, TouchableOpacity, Alert, ScrollView, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
-import { confirmSignUp, resendSignUpCode } from "aws-amplify/auth";
+import { useAuth } from "@/hooks/useAuth";
+import { getRoleRedirectPath, getRoleDisplayName, UserRole } from "@/constants/userRoles";
+import { resendSignUpCode } from "aws-amplify/auth";
 import { Mail, Hash, ArrowLeft } from "lucide-react-native";
 
 const ConfirmarEmail = () => {
@@ -11,6 +13,8 @@ const ConfirmarEmail = () => {
     const [codigo, setCodigo] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [isResending, setIsResending] = useState(false);
+
+    const { confirmarUsuario } = useAuth();
 
     const handleConfirmar = async () => {
         if (!codigo.trim()) {
@@ -23,35 +27,74 @@ const ConfirmarEmail = () => {
             return;
         }
 
+        if (!email) {
+            Alert.alert("Error", "Email no disponible. Regresa e intenta de nuevo.");
+            return;
+        }
+
         setIsLoading(true);
 
         try {
             console.log('🔐 Confirmando usuario:', email, 'con código:', codigo);
 
-            const { isSignUpComplete } = await confirmSignUp({
-                username: email!,
-                confirmationCode: codigo,
-            });
+            const result = await confirmarUsuario(email, codigo);
 
-            console.log('✅ Confirmación exitosa:', isSignUpComplete);
+            console.log('✅ Resultado confirmación:', result);
 
-            if (isSignUpComplete) {
+            if (result.success) {
+                // ✅ SI TIENE autoLogin, va directo al menú
+                if (result.autoLogin && result.user && result.role) {
+                    const roleDisplayName = getRoleDisplayName(result.role as UserRole);
+                    const redirectPath = getRoleRedirectPath(result.role as UserRole);
+
+                    Alert.alert(
+                        "¡Bienvenido a UniFood!",
+                        `Tu cuenta ha sido verificada exitosamente. Has iniciado sesión como ${roleDisplayName}.`,
+                        [
+                            {
+                                text: "Continuar",
+                                onPress: () => router.replace(redirectPath as any),
+                            },
+                        ]
+                    );
+                }
+                // ✅ SI NO, va a login
+                else if (result.needsLogin) {
+                    Alert.alert(
+                        "¡Cuenta confirmada!",
+                        "Tu cuenta ha sido verificada exitosamente. Ahora puedes iniciar sesión.",
+                        [
+                            {
+                                text: "Iniciar Sesión",
+                                onPress: () => router.replace("/(auth)/iniciaSesion"),
+                            },
+                        ]
+                    );
+                }
+                // ✅ FALLBACK: va al menú principal
+                else {
+                    Alert.alert(
+                        "¡Cuenta confirmada!",
+                        "Tu cuenta ha sido verificada exitosamente.",
+                        [
+                            {
+                                text: "Continuar",
+                                onPress: () => router.replace("/(root)/(tabs)/home"),
+                            },
+                        ]
+                    );
+                }
+            } else {
                 Alert.alert(
-                    "¡Cuenta confirmada!",
-                    "¿Bienvenido a uniFood!",
-                    [
-                        {
-                            text: "Continuar",
-                            onPress: () => router.replace("/(root)/(tabs)/home"),
-                        },
-                    ]
+                    "Error de confirmación",
+                    result.error || "Código incorrecto o expirado"
                 );
             }
         } catch (error: any) {
             console.error('❌ Error en confirmación:', error);
             Alert.alert(
                 "Error de confirmación",
-                error.message || "Código incorrecto o expirado"
+                "Ocurrió un error inesperado. Intenta nuevamente."
             );
         } finally {
             setIsLoading(false);
@@ -59,13 +102,18 @@ const ConfirmarEmail = () => {
     };
 
     const handleReenviarCodigo = async () => {
+        if (!email) {
+            Alert.alert("Error", "Email no disponible");
+            return;
+        }
+
         setIsResending(true);
 
         try {
             console.log('📧 Reenviando código a:', email);
 
             await resendSignUpCode({
-                username: email!,
+                username: email,
             });
 
             Alert.alert(
@@ -160,7 +208,7 @@ const ConfirmarEmail = () => {
                         ) : (
                             <Text className={`font-JakartaBold text-lg text-center ${codigo.length !== 6 ? 'text-gray-500' : 'text-white'
                                 }`}>
-                                Confirmar Cuenta
+                                Confirmar y Continuar
                             </Text>
                         )}
                     </TouchableOpacity>
