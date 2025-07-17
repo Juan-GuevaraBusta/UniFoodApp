@@ -1,7 +1,6 @@
 // constants/userRoles.ts - Sistema mejorado con IDs de universidad y restaurante
 export const ADMIN_EMAILS = [
     'admin@unifood.com',
-    'neodigital.management@gmail.com',
 ];
 
 // Mapeo de emails de restaurantes con sus IDs específicos
