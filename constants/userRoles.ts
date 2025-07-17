@@ -93,7 +93,7 @@ export const getRoleRedirectPath = (role: UserRole): string => {
         case 'student':
             return '/(root)/(tabs)/home';
         case 'restaurant_owner':
-            return '/(restaurant)/dashboard'; // Crearemos esta ruta después
+            return '/(restaurant)/home'; // ← ACTUALIZADO: Cambié de dashboard a home
         case 'admin':
             return '/(admin)/dashboard'; // Crearemos esta ruta después
         default:

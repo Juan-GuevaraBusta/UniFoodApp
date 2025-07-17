@@ -133,7 +133,7 @@ const inscribete = () => {
             <Text className="text-[#132e3c] text-base font-JakartaBold mb-2">
               Email
             </Text>
-            <View className="flex-row items-center bg-gray-50 rounded-xl px-4 py-5 border border-gray-200">
+            <View className="flex-row items-center bg-gray-50 rounded-xl px-4 py-8 border border-gray-200">
               <Mail size={20} color="#9CA3AF" />
               <TextInput
                 value={email}
@@ -177,7 +177,7 @@ const inscribete = () => {
             <Text className="text-[#132e3c] text-base font-JakartaBold mb-2">
               Contraseña
             </Text>
-            <View className="flex-row items-center bg-gray-50 rounded-xl px-4 py-5 border border-gray-200">
+            <View className="flex-row items-center bg-gray-50 rounded-xl px-4 py-8 border border-gray-200">
               <Lock size={20} color="#9CA3AF" />
               <TextInput
                 value={password}
@@ -216,7 +216,7 @@ const inscribete = () => {
             <Text className="text-[#132e3c] text-base font-JakartaBold mb-2">
               Confirmar contraseña
             </Text>
-            <View className="flex-row items-center bg-gray-50 rounded-xl px-4 py-5 border border-gray-200">
+            <View className="flex-row items-center bg-gray-50 rounded-xl px-4 py-8 border border-gray-200">
               <Lock size={20} color="#9CA3AF" />
               <TextInput
                 value={confirmPassword}
