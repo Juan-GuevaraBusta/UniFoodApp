@@ -1,4 +1,4 @@
-// hooks/usePlato.ts - Actualizado
+// hooks/usePlato.ts - Corrigiendo el error de universidadId
 import { useState, useMemo, useCallback, useEffect } from 'react';
 import { Plato, Topping } from './useRestaurantes';
 import { PlatoCarrito } from '@/context/contextCarrito';
@@ -6,11 +6,18 @@ import { PlatoCarrito } from '@/context/contextCarrito';
 interface UsePlatoProps {
     plato: Plato | null;
     idRestaurante: number;
-    nombreRestaurante?: string;    // ← AGREGAR
-    nombreUniversidad?: string;    // ← AGREGAR
+    nombreRestaurante?: string;
+    nombreUniversidad?: string;
+    universidadId?: number; // Sin valor por defecto aquí
 }
 
-export const usePlato = ({ plato, idRestaurante, nombreRestaurante = '', nombreUniversidad = '' }: UsePlatoProps) => {
+export const usePlato = ({
+    plato,
+    idRestaurante,
+    nombreRestaurante = '',
+    nombreUniversidad = '',
+    universidadId // ← SIN VALOR POR DEFECTO - debe pasarse desde el componente
+}: UsePlatoProps) => {
     // Estados simplificados para checkboxes
     const [toppingsAdicionalesSeleccionados, setToppingsAdicionalesSeleccionados] = useState<number[]>([]);
     const [toppingsBaseRemocionados, setToppingsBaseRemocionados] = useState<number[]>([]);
@@ -96,14 +103,30 @@ export const usePlato = ({ plato, idRestaurante, nombreRestaurante = '', nombreU
         return toppingsBaseRemocionados;
     }, [toppingsBaseRemocionados]);
 
-    // Crear objeto para carrito - ACTUALIZADO
+    // Crear objeto para carrito - CORREGIDO con universidadId dinámico
     const crearPlatoParaCarrito = useCallback((): Omit<PlatoCarrito, 'idUnico' | 'fechaAgregado'> | null => {
         if (!plato) return null;
 
+        // Validar que tengamos el universidadId
+        if (!universidadId) {
+            console.error('❌ universidadId no está definido en usePlato');
+            return null;
+        }
+
+        // Log para debugging
+        console.log('🔧 Creando plato para carrito con:', {
+            idRestaurante,
+            nombreRestaurante,
+            nombreUniversidad,
+            universidadId,
+            platoNombre: plato.nombre
+        });
+
         return {
             idRestaurante,
-            nombreRestaurante,        // ← AGREGAR
-            nombreUniversidad,        // ← AGREGAR
+            nombreRestaurante,
+            nombreUniversidad,
+            universidadId, // ← Ahora viene del AsyncStorage/props
             plato,
             cantidad,
             comentarios: comentarios.trim(),
@@ -113,8 +136,9 @@ export const usePlato = ({ plato, idRestaurante, nombreRestaurante = '', nombreU
         };
     }, [
         idRestaurante,
-        nombreRestaurante,           // ← AGREGAR
-        nombreUniversidad,           // ← AGREGAR
+        nombreRestaurante,
+        nombreUniversidad,
+        universidadId, // ← Dependencia importante
         plato,
         cantidad,
         comentarios,

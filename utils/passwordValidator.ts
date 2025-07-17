@@ -1,4 +1,3 @@
-// utils/passwordValidator.ts
 export interface PasswordValidation {
     isValid: boolean;
     errors: string[];

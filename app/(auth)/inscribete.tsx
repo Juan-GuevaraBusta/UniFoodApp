@@ -127,7 +127,7 @@ const inscribete = () => {
         </View>
 
         {/* Formulario */}
-        <View className="px-5 py-6">
+        <View className="px-5 py-7">
           {/* Campo Email */}
           <View className="mb-6">
             <Text className="text-[#132e3c] text-base font-JakartaBold mb-2">

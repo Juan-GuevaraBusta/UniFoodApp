@@ -24,8 +24,9 @@ export interface Plato {
 
 export interface PlatoCarrito {
     idRestaurante: number;
-    nombreRestaurante: string;  // ← AGREGAR
-    nombreUniversidad: string;  // ← AGREGAR
+    nombreRestaurante: string;
+    nombreUniversidad: string;  
+    universidadId: number;
     plato: Plato;
     cantidad: number;
     comentarios: string;

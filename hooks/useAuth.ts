@@ -1,19 +1,35 @@
-// hooks/useAuth.ts - Basado en documentación oficial Amplify Gen 2
+// hooks/useAuth.ts - Con información específica de restaurante
 import { useState } from 'react';
 import { signUp, signIn, confirmSignUp, signOut, getCurrentUser } from 'aws-amplify/auth';
-import { getUserRoleByEmail } from '@/constants/userRoles';
+import { getUserRoleByEmail, getRestaurantInfoByEmail, type RestaurantInfo } from '@/constants/userRoles';
 
 export interface AuthUser {
     username: string;
     email: string;
     isAuthenticated: boolean;
+    role?: string;
+    restaurantInfo?: RestaurantInfo | null; // Nueva propiedad para info del restaurante
 }
 
 export const useAuth = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [user, setUser] = useState<AuthUser | null>(null);
 
-    // REGISTRO - Basado en docs oficiales
+    // Función auxiliar para crear usuario autenticado con toda la info
+    const createAuthUser = (currentUser: any, email: string): AuthUser => {
+        const role = getUserRoleByEmail(email);
+        const restaurantInfo = role === 'restaurant_owner' ? getRestaurantInfoByEmail(email) : null;
+
+        return {
+            username: currentUser.username,
+            email: email,
+            isAuthenticated: true,
+            role,
+            restaurantInfo,
+        };
+    };
+
+    // REGISTRO - Sin cambios significativos
     const registrarUsuario = async (email: string, password: string) => {
         try {
             setIsLoading(true);
@@ -36,7 +52,7 @@ export const useAuth = () => {
                 message: 'Usuario registrado. Revisa tu email para confirmar.',
                 needsConfirmation: !isSignUpComplete,
                 userId,
-                email, // ← AGREGAMOS EL EMAIL PARA PASARLO A CONFIRMACIÓN
+                email,
             };
 
         } catch (error: any) {
@@ -50,7 +66,7 @@ export const useAuth = () => {
         }
     };
 
-    // CONFIRMACIÓN - MEJORADA para ir directo al menú
+    // CONFIRMACIÓN - Con información específica de restaurante
     const confirmarUsuario = async (email: string, confirmationCode: string) => {
         try {
             setIsLoading(true);
@@ -64,31 +80,33 @@ export const useAuth = () => {
             console.log('✅ Confirmación exitosa:', { isSignUpComplete, nextStep });
 
             if (isSignUpComplete) {
-                // ✅ DESPUÉS DE CONFIRMAR, HACER LOGIN AUTOMÁTICO
                 console.log('🔐 Haciendo login automático después de confirmación...');
 
-                // Obtener información del usuario
                 try {
                     const currentUser = await getCurrentUser();
-                    const role = getUserRoleByEmail(email);
-
-                    const authUser: AuthUser = {
-                        username: currentUser.username,
-                        email: email,
-                        isAuthenticated: true,
-                    };
+                    const authUser = createAuthUser(currentUser, email);
 
                     setUser(authUser);
+
+                    // Log específico para restaurantes
+                    if (authUser.restaurantInfo) {
+                        console.log('🍕 Restaurante confirmado:', {
+                            nombre: authUser.restaurantInfo.nombreRestaurante,
+                            universidad: authUser.restaurantInfo.nombreUniversidad,
+                            universidadId: authUser.restaurantInfo.universidadId,
+                            restauranteId: authUser.restaurantInfo.restauranteId
+                        });
+                    }
 
                     return {
                         success: true,
                         message: 'Usuario confirmado e iniciado sesión exitosamente',
                         user: authUser,
-                        role,
+                        role: authUser.role,
+                        restaurantInfo: authUser.restaurantInfo,
                         autoLogin: true
                     };
                 } catch (loginError) {
-                    // Si no puede hacer login automático, solo confirmar
                     return {
                         success: true,
                         message: 'Usuario confirmado exitosamente. Por favor inicia sesión.',
@@ -113,14 +131,66 @@ export const useAuth = () => {
         }
     };
 
-    // LOGIN - Con mejor manejo de confirmación
-    const iniciarSesion = async (email: string, password: string) => {
+    // FUNCIÓN AUXILIAR: Cerrar sesión forzadamente
+    const forzarCerrarSesion = async () => {
+        try {
+            await signOut({ global: true });
+            setUser(null);
+            return true;
+        } catch (error) {
+            try {
+                await signOut();
+                setUser(null);
+                return true;
+            } catch (fallbackError) {
+                return false;
+            }
+        }
+    };
+
+    // LOGIN - Con información específica de restaurante
+    const iniciarSesion = async (email: string, password: string, retryCount = 0) => {
         try {
             setIsLoading(true);
-            console.log('🔐 Iniciando sesión:', email);
+            console.log('🔐 Iniciando sesión (múltiples dispositivos permitidos):', email);
 
             const username = email.toLowerCase().trim();
 
+            // PRIMER INTENTO: Verificar usuario actual
+            try {
+                const currentUser = await getCurrentUser();
+                if (currentUser) {
+                    // Si es el mismo usuario, devolver éxito inmediatamente
+                    if (currentUser.signInDetails?.loginId === username) {
+                        console.log('✅ Usuario ya autenticado - acceso directo');
+
+                        const authUser = createAuthUser(currentUser, username);
+                        setUser(authUser);
+
+                        // Log específico para restaurantes
+                        if (authUser.restaurantInfo) {
+                            console.log('🍕 Restaurante ya autenticado:', {
+                                nombre: authUser.restaurantInfo.nombreRestaurante,
+                                universidad: authUser.restaurantInfo.nombreUniversidad,
+                                universidadId: authUser.restaurantInfo.universidadId,
+                                restauranteId: authUser.restaurantInfo.restauranteId
+                            });
+                        }
+
+                        return {
+                            success: true,
+                            message: 'Ya estás logueado con esta cuenta',
+                            user: authUser,
+                            role: authUser.role,
+                            restaurantInfo: authUser.restaurantInfo,
+                        };
+                    }
+                }
+            } catch (getUserError) {
+                // Silencioso - no hay usuario previo
+            }
+
+            // SEGUNDO INTENTO: Intentar login normal
             const { isSignedIn, nextStep } = await signIn({
                 username,
                 password,
@@ -129,27 +199,30 @@ export const useAuth = () => {
                 },
             });
 
-            console.log('✅ Resultado signIn:', { isSignedIn, nextStep });
+            console.log('✅ Login exitoso');
 
             if (isSignedIn) {
                 const currentUser = await getCurrentUser();
-                const role = getUserRoleByEmail(email);
-
-                console.log('👤 Usuario actual:', currentUser);
-
-                const authUser: AuthUser = {
-                    username: currentUser.username,
-                    email: username,
-                    isAuthenticated: true,
-                };
+                const authUser = createAuthUser(currentUser, username);
 
                 setUser(authUser);
+
+                // Log específico para restaurantes
+                if (authUser.restaurantInfo) {
+                    console.log('🍕 Restaurante logueado exitosamente:', {
+                        nombre: authUser.restaurantInfo.nombreRestaurante,
+                        universidad: authUser.restaurantInfo.nombreUniversidad,
+                        universidadId: authUser.restaurantInfo.universidadId,
+                        restauranteId: authUser.restaurantInfo.restauranteId
+                    });
+                }
 
                 return {
                     success: true,
                     message: 'Inicio de sesión exitoso',
                     user: authUser,
-                    role,
+                    role: authUser.role,
+                    restaurantInfo: authUser.restaurantInfo,
                 };
             } else {
                 if (nextStep?.signInStep === 'CONFIRM_SIGN_UP') {
@@ -157,7 +230,7 @@ export const useAuth = () => {
                         success: false,
                         error: 'Debes confirmar tu email antes de iniciar sesión',
                         needsConfirmation: true,
-                        email: username, // ← PASAMOS EL EMAIL
+                        email: username,
                     };
                 }
 
@@ -168,6 +241,29 @@ export const useAuth = () => {
             }
 
         } catch (error: any) {
+            // Manejo silencioso de UserAlreadyAuthenticatedException
+            if (error.name === 'UserAlreadyAuthenticatedException' ||
+                error.message.includes('There is already a signed in user')) {
+
+                if (retryCount === 0) {
+                    console.log('🔄 Resolviendo conflicto de sesión...');
+
+                    const signOutSuccess = await forzarCerrarSesion();
+
+                    if (signOutSuccess) {
+                        await new Promise(resolve => setTimeout(resolve, 500));
+                        return await iniciarSesion(email, password, 1);
+                    }
+                }
+
+                return {
+                    success: false,
+                    error: 'Conflicto de sesiones. Intenta cerrar sesión desde el perfil.',
+                    needsManualSignOut: true,
+                };
+            }
+
+            // SOLO LOGEAR OTROS ERRORES
             console.error('❌ Error en login:', error);
 
             let errorMessage = error.message || 'Error al iniciar sesión';
@@ -185,7 +281,7 @@ export const useAuth = () => {
                         success: false,
                         error: errorMessage,
                         needsConfirmation: true,
-                        email: email.toLowerCase().trim(), // ← PASAMOS EL EMAIL
+                        email: email.toLowerCase().trim(),
                     };
                 case 'TooManyRequestsException':
                     errorMessage = 'Demasiados intentos. Espera un momento';
@@ -205,16 +301,16 @@ export const useAuth = () => {
         }
     };
 
-    // CERRAR SESIÓN
+    // CERRAR SESIÓN - Sin cambios
     const cerrarSesion = async () => {
         try {
             setIsLoading(true);
-            console.log('🚪 Cerrando sesión...');
+            console.log('🚪 Cerrando sesión (solo en este dispositivo)...');
 
             await signOut();
             setUser(null);
 
-            console.log('✅ Sesión cerrada');
+            console.log('✅ Sesión cerrada en este dispositivo. Otras sesiones permanecen activas.');
             return {
                 success: true,
                 message: 'Sesión cerrada exitosamente'
@@ -222,6 +318,8 @@ export const useAuth = () => {
 
         } catch (error: any) {
             console.error('❌ Error cerrando sesión:', error);
+            setUser(null);
+
             return {
                 success: false,
                 error: error.message || 'Error al cerrar sesión'
@@ -231,25 +329,30 @@ export const useAuth = () => {
         }
     };
 
-    // VERIFICAR SESIÓN ACTUAL
+    // VERIFICAR SESIÓN ACTUAL - Con información específica
     const verificarSesion = async () => {
         try {
             const currentUser = await getCurrentUser();
 
             if (currentUser) {
-                const authUser: AuthUser = {
-                    username: currentUser.username,
-                    email: currentUser.signInDetails?.loginId || '',
-                    isAuthenticated: true,
-                };
+                const email = currentUser.signInDetails?.loginId || '';
+                const authUser = createAuthUser(currentUser, email);
 
                 setUser(authUser);
+
+                // Log de sesión verificada para restaurantes
+                if (authUser.restaurantInfo) {
+                    console.log('🔍 Sesión de restaurante verificada:', {
+                        nombre: authUser.restaurantInfo.nombreRestaurante,
+                        universidad: authUser.restaurantInfo.nombreUniversidad
+                    });
+                }
+
                 return authUser;
             }
 
             return null;
         } catch (error) {
-            console.log('No hay sesión activa');
             setUser(null);
             return null;
         }

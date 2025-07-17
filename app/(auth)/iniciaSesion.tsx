@@ -15,6 +15,8 @@ const iniciaSesion = () => {
 
   const { iniciarSesion } = useAuth();
 
+  // Solo necesitas actualizar la función handleLogin en iniciaSesion.tsx
+
   const handleLogin = async () => {
     // Validaciones básicas
     if (!email.trim()) {
@@ -79,7 +81,29 @@ const iniciaSesion = () => {
               },
             ]
           );
-        } else {
+        }
+        // NUEVO: Manejar error de sesión ya activa
+        else if ("needsManualSignOut" in result && result.needsManualSignOut) {
+          Alert.alert(
+            "Sesión activa detectada",
+            result.error,
+            [
+              {
+                text: "Ir a Perfil",
+                onPress: () => router.push("/(root)/(tabs)/profile"),
+              },
+              {
+                text: "Intentar de nuevo",
+                onPress: () => handleLogin(), // Reintentar
+              },
+              {
+                text: "Cancelar",
+                style: "cancel",
+              },
+            ]
+          );
+        }
+        else {
           Alert.alert("Error al iniciar sesión", result.error);
         }
       }
@@ -175,6 +199,16 @@ const iniciaSesion = () => {
             </Text>
             <Text className="text-blue-600 font-JakartaMedium text-xs mt-2">
               * Primero regístrate, luego inicia sesión
+            </Text>
+          </View>
+
+          {/* OPCIONAL: Mensaje sobre múltiples dispositivos */}
+          <View className="mb-6 p-3 bg-green-50 rounded-xl">
+            <Text className="text-green-800 font-JakartaBold text-sm mb-1">
+              📱 Múltiples dispositivos
+            </Text>
+            <Text className="text-green-700 font-JakartaMedium text-xs">
+              Puedes usar tu cuenta en varios dispositivos al mismo tiempo
             </Text>
           </View>
 

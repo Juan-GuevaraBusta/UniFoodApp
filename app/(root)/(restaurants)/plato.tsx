@@ -19,6 +19,7 @@ const plato = () => {
   const [restauranteNombre, setRestauranteNombre] = useState('');
   const [platoNombre, setPlatoNombre] = useState('');
   const [universidadActual, setUniversidadActual] = useState('')
+  const [universidadId, setUniversidadId] = useState(1)
 
   const { obtenerPlatoPorId } = useRestaurantes();
   const { agregarAlCarrito, obtenerCantidadTotalCarrito } = useCarrito();
@@ -28,7 +29,8 @@ const plato = () => {
     plato: platoActual,
     idRestaurante,
     nombreRestaurante: restauranteNombre,
-    nombreUniversidad: universidadActual
+    nombreUniversidad: universidadActual,
+    universidadId
   });
 
   useFocusEffect(
