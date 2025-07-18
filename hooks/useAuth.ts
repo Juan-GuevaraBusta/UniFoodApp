@@ -332,27 +332,24 @@ export const useAuth = () => {
     // VERIFICAR SESIÓN ACTUAL - Con información específica
     const verificarSesion = async () => {
         try {
+            console.log('🔍 VERIFICAR SESION - Iniciando...');
             const currentUser = await getCurrentUser();
+            console.log('🔍 VERIFICAR SESION - Current user:', currentUser);
 
             if (currentUser) {
                 const email = currentUser.signInDetails?.loginId || '';
+                console.log('🔍 VERIFICAR SESION - Email:', email);
+
                 const authUser = createAuthUser(currentUser, email);
+                console.log('🔍 VERIFICAR SESION - AuthUser creado:', authUser);
 
                 setUser(authUser);
-
-                // Log de sesión verificada para restaurantes
-                if (authUser.restaurantInfo) {
-                    console.log('🔍 Sesión de restaurante verificada:', {
-                        nombre: authUser.restaurantInfo.nombreRestaurante,
-                        universidad: authUser.restaurantInfo.nombreUniversidad
-                    });
-                }
-
                 return authUser;
             }
 
             return null;
         } catch (error) {
+            console.error('❌ VERIFICAR SESION - Error:', error);
             setUser(null);
             return null;
         }
