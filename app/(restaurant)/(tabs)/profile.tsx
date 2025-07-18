@@ -4,7 +4,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { useAuth } from "@/hooks/useAuth";
 import { useState } from "react";
-import { ArrowLeft, Store, LogOut, Settings, Mail, MapPin } from "lucide-react-native";
+import { Store, LogOut, Settings, Mail, MapPin, Home } from "lucide-react-native";
 
 const RestaurantProfile = () => {
     const { user, cerrarSesion } = useAuth();
@@ -64,18 +64,6 @@ const RestaurantProfile = () => {
 
     return (
         <SafeAreaView className="flex-1 bg-white">
-            {/* Header */}
-            <View className="flex-row items-center justify-between px-5 py-4 border-b border-gray-200">
-                <TouchableOpacity
-                    onPress={() => router.back()}
-                    className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center"
-                >
-                    <ArrowLeft size={20} color="#132e3c" />
-                </TouchableOpacity>
-                <Text className="text-[#132e3c] text-xl font-JakartaBold">Perfil del Restaurante</Text>
-                <View className="w-10" />
-            </View>
-
             <ScrollView className="flex-1 px-5 py-8">
                 {/* Header del restaurante */}
                 <View className="items-center mb-8">
@@ -133,7 +121,7 @@ const RestaurantProfile = () => {
 
                     {/* Opciones de configuración */}
                     <TouchableOpacity
-                        onPress={() => router.push("/(restaurant)/(tabs)/configRestaurante")}
+                        onPress={() => router.push("/(restaurant)/configRestaurante")}
                         className="bg-white border border-gray-200 rounded-xl p-4 flex-row items-center"
                     >
                         <Settings size={20} color="#132e3c" />
@@ -151,21 +139,15 @@ const RestaurantProfile = () => {
                     </Text>
 
                     <TouchableOpacity
-                        onPress={() => router.push("/(restaurant)/home")}
+                        onPress={() => router.push("/(restaurant)/(tabs)/home")}
                         className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-3"
                     >
-                        <Text className="text-blue-800 font-JakartaBold text-base">
-                            🏠 Ir al Home
-                        </Text>
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                        onPress={() => router.push("/(restaurant)/pedidos")}
-                        className="bg-orange-50 border border-orange-200 rounded-xl p-4"
-                    >
-                        <Text className="text-orange-800 font-JakartaBold text-base">
-                            📋 Ver Pedidos Activos
-                        </Text>
+                        <View className="flex-row items-center">
+                            <Home size={20} color="#3B82F6" />
+                            <Text className="text-blue-800 font-JakartaBold text-base ml-3">
+                                Ir al Panel Principal
+                            </Text>
+                        </View>
                     </TouchableOpacity>
                 </View>
 

@@ -4,7 +4,7 @@ import { router } from "expo-router";
 import { useAuth } from "@/hooks/useAuth";
 import { useRestaurantes } from "@/hooks/useRestaurantes";
 import { useState, useEffect } from "react";
-import { ArrowLeft, Eye, Star, Clock } from "lucide-react-native";
+import { Home, Eye, Star, Clock } from "lucide-react-native";
 
 const ViewRestaurante = () => {
     const { user } = useAuth();
@@ -31,15 +31,22 @@ const ViewRestaurante = () => {
     return (
         <SafeAreaView className="flex-1 bg-white">
             {/* Header */}
-            <View className="flex-row items-center justify-between px-5 py-4 border-b border-gray-200">
-                <TouchableOpacity
-                    onPress={() => router.back()}
-                    className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center"
-                >
-                    <ArrowLeft size={20} color="#132e3c" />
-                </TouchableOpacity>
-                <Text className="text-[#132e3c] text-xl font-JakartaBold">Vista Previa</Text>
-                <View className="w-10" />
+            <View className="px-5 py-6 border-b border-gray-200">
+                <View className="flex-row items-center justify-between">
+                    <TouchableOpacity
+                        onPress={() => router.push("/(restaurant)/home")}
+                        className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center"
+                    >
+                        <Home size={20} color="#132e3c" />
+                    </TouchableOpacity>
+                    <View className="flex-1 items-center">
+                        <Text className="text-[#132e3c] text-xl font-JakartaBold">Vista Previa</Text>
+                        <Text className="text-gray-600 text-sm font-JakartaMedium">
+                            Como ven los estudiantes tu restaurante
+                        </Text>
+                    </View>
+                    <View className="w-10" />
+                </View>
             </View>
 
             <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
@@ -168,10 +175,19 @@ const ViewRestaurante = () => {
                     )}
                 </View>
 
-                {/* Botón para ir a edición */}
+                {/* Información útil */}
                 <View className="px-5 pb-8">
+                    <View className="bg-blue-50 rounded-xl p-4 mb-6">
+                        <Text className="text-blue-800 font-JakartaBold text-sm mb-2">
+                            👀 Vista del Cliente
+                        </Text>
+                        <Text className="text-blue-700 font-JakartaMedium text-xs">
+                            Esta es exactamente la vista que tienen los estudiantes cuando navegan por tu restaurante desde la app UniFood.
+                        </Text>
+                    </View>
+
                     <TouchableOpacity
-                        onPress={() => router.push("/(restaurant)/(tabs)/edicionRestaurante")}
+                        onPress={() => router.push("/(restaurant)/(tabs)/home")}
                         className="bg-[#132e3c] py-4 rounded-xl flex-row items-center justify-center"
                         style={{
                             shadowColor: '#000',
@@ -182,7 +198,7 @@ const ViewRestaurante = () => {
                         }}
                     >
                         <Text className="text-white font-JakartaBold text-lg">
-                            Editar Menú
+                            Volver al Panel Principal
                         </Text>
                     </TouchableOpacity>
                 </View>

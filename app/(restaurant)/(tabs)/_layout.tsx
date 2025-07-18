@@ -1,5 +1,5 @@
 import { Tabs } from "expo-router";
-import { Settings, Eye, ClipboardList, Cog } from "lucide-react-native";
+import { Home, User } from "lucide-react-native";
 
 const RestaurantTabsLayout = () => {
     return (
@@ -28,31 +28,21 @@ const RestaurantTabsLayout = () => {
             }}
         >
             <Tabs.Screen
-                name="edicionRestaurante"
+                name="home"
                 options={{
-                    title: 'Editar Menú',
+                    title: 'Inicio',
                     tabBarIcon: ({ color, size }) => (
-                        <Settings color={color} size={size || 24} />
+                        <Home color={color} size={size || 24} />
                     ),
                 }}
             />
 
             <Tabs.Screen
-                name="viewRestaurante"
+                name="profile"
                 options={{
-                    title: 'Vista Previa',
+                    title: 'Perfil',
                     tabBarIcon: ({ color, size }) => (
-                        <Eye color={color} size={size || 24} />
-                    ),
-                }}
-            />
-
-            <Tabs.Screen
-                name="configRestaurante"
-                options={{
-                    title: 'Configuración',
-                    tabBarIcon: ({ color, size }) => (
-                        <Cog color={color} size={size || 24} />
+                        <User color={color} size={size || 24} />
                     ),
                 }}
             />
