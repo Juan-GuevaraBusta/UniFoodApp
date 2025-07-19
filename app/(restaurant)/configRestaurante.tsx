@@ -9,27 +9,34 @@ import { ArrowLeft, Star, Clock, Save, RefreshCw } from "lucide-react-native";
 
 const ConfigRestaurante = () => {
     const { user, verificarSesion } = useAuth();
-    const { obtenerRestaurantePorId, actualizarDisponibilidadPlato, obtenerDisponibilidadPlatos } = useRestaurantes();
+    const { obtenerRestaurantePorId, guardarCambiosDisponibilidad, obtenerDisponibilidadPlatos } = useRestaurantes();
+
+    // Estados del componente
     const [restauranteData, setRestauranteData] = useState<any>(null);
     const [platosDisponibles, setPlatosDisponibles] = useState<{ [key: number]: boolean }>({});
+    const [disponibilidadOriginal, setDisponibilidadOriginal] = useState<{ [key: number]: boolean }>({});
     const [cambiosRealizados, setCambiosRealizados] = useState(false);
     const [guardando, setGuardando] = useState(false);
 
-    // Verificar sesión al cargar el componente
+    // ✅ Verificar sesión al cargar el componente - IGUAL QUE EN HOME
     useEffect(() => {
         verificarSesion();
     }, []);
 
+    // ✅ Cargar datos del restaurante - MISMA LÓGICA QUE EN HOME
     useEffect(() => {
         if (user?.restaurantInfo?.restauranteId) {
             const timer = setTimeout(() => {
                 const restaurante = obtenerRestaurantePorId(user.restaurantInfo!.restauranteId);
                 setRestauranteData(restaurante);
 
-                // Cargar disponibilidad actual desde el JSON
+                // Cargar disponibilidad actual (local + original)
                 if (restaurante?.menu) {
                     const disponibilidadActual = obtenerDisponibilidadPlatos(user.restaurantInfo!.restauranteId);
                     setPlatosDisponibles(disponibilidadActual);
+                    setDisponibilidadOriginal(disponibilidadActual);
+
+                    console.log('📊 Disponibilidad cargada en config:', disponibilidadActual);
                 }
             }, 100);
 
@@ -37,6 +44,7 @@ const ConfigRestaurante = () => {
         }
     }, [user]);
 
+    // Función para cambiar disponibilidad de un plato
     const toggleDisponibilidadPlato = (idPlato: number) => {
         setPlatosDisponibles(prev => {
             const nuevaDisponibilidad = {
@@ -44,17 +52,19 @@ const ConfigRestaurante = () => {
                 [idPlato]: !prev[idPlato]
             };
 
-            // Verificar si hay cambios comparando con el estado original
-            const disponibilidadOriginal = obtenerDisponibilidadPlatos(user!.restaurantInfo!.restauranteId);
+            // Verificar cambios comparando con disponibilidad original
             const hayCambios = Object.keys(nuevaDisponibilidad).some(
                 platoId => nuevaDisponibilidad[parseInt(platoId)] !== disponibilidadOriginal[parseInt(platoId)]
             );
 
             setCambiosRealizados(hayCambios);
+            console.log('🔄 Toggle plato:', idPlato, 'Nueva disponibilidad:', !prev[idPlato], 'Hay cambios:', hayCambios);
+
             return nuevaDisponibilidad;
         });
     };
 
+    // Función para guardar cambios
     const guardarCambios = async () => {
         if (!user?.restaurantInfo || !cambiosRealizados) return;
 
@@ -63,57 +73,60 @@ const ConfigRestaurante = () => {
         try {
             console.log('💾 Guardando cambios de disponibilidad...');
 
-            // Obtener la disponibilidad original para comparar
-            const disponibilidadOriginal = obtenerDisponibilidadPlatos(user.restaurantInfo.restauranteId);
-            const platosModificados: Array<{ plato: string, estado: string }> = [];
+            // Guardar todos los cambios usando la función integrada
+            const success = await guardarCambiosDisponibilidad(
+                user.restaurantInfo.restauranteId,
+                platosDisponibles
+            );
 
-            // Actualizar cada plato que haya cambiado
-            for (const [platoIdStr, nuevaDisponibilidad] of Object.entries(platosDisponibles)) {
-                const platoId = parseInt(platoIdStr);
-                const disponibilidadOriginalPlato = disponibilidadOriginal[platoId];
+            if (success) {
+                // Identificar cambios específicos para el mensaje
+                const platosModificados: Array<{ plato: string, estado: string }> = [];
 
-                if (nuevaDisponibilidad !== disponibilidadOriginalPlato) {
-                    const success = await actualizarDisponibilidadPlato(
-                        user.restaurantInfo.restauranteId,
-                        platoId,
-                        nuevaDisponibilidad
-                    );
+                Object.keys(platosDisponibles).forEach(platoIdStr => {
+                    const platoId = parseInt(platoIdStr);
+                    const nuevaDisponibilidad = platosDisponibles[platoId];
+                    const disponibilidadOriginalPlato = disponibilidadOriginal[platoId];
 
-                    if (success) {
+                    if (nuevaDisponibilidad !== disponibilidadOriginalPlato) {
                         const plato = restauranteData.menu.find((p: any) => p.idPlato === platoId);
                         platosModificados.push({
                             plato: plato?.nombre || `Plato ${platoId}`,
                             estado: nuevaDisponibilidad ? 'disponible' : 'no disponible'
                         });
                     }
+                });
+
+                // Actualizar estado original con los nuevos valores
+                setDisponibilidadOriginal({ ...platosDisponibles });
+                setCambiosRealizados(false);
+
+                // Mostrar confirmación
+                if (platosModificados.length > 0) {
+                    const resumenCambios = platosModificados
+                        .map(cambio => `• ${cambio.plato}: ${cambio.estado}`)
+                        .join('\n');
+
+                    Alert.alert(
+                        '✅ Cambios guardados exitosamente',
+                        `Se actualizaron ${platosModificados.length} plato(s):\n\n${resumenCambios}\n\nLos estudiantes verán estos cambios inmediatamente.`,
+                        [
+                            {
+                                text: 'Ver vista previa',
+                                onPress: () => router.push('/(restaurant)/viewRestaurante')
+                            },
+                            {
+                                text: 'Continuar editando',
+                                style: 'cancel'
+                            }
+                        ]
+                    );
+                } else {
+                    Alert.alert('✅ Guardado', 'Configuración actualizada correctamente.');
                 }
+            } else {
+                throw new Error('Error al guardar en AsyncStorage');
             }
-
-            // Simular tiempo de guardado
-            await new Promise(resolve => setTimeout(resolve, 1500));
-
-            if (platosModificados.length > 0) {
-                const resumenCambios = platosModificados
-                    .map(cambio => `• ${cambio.plato}: ${cambio.estado}`)
-                    .join('\n');
-
-                Alert.alert(
-                    '✅ Cambios guardados',
-                    `Se actualizaron ${platosModificados.length} plato(s):\n\n${resumenCambios}\n\nLos estudiantes verán estos cambios inmediatamente.`,
-                    [
-                        {
-                            text: 'Ver vista previa',
-                            onPress: () => router.push('/(restaurant)/viewRestaurante')
-                        },
-                        {
-                            text: 'Continuar editando',
-                            style: 'cancel'
-                        }
-                    ]
-                );
-            }
-
-            setCambiosRealizados(false);
 
         } catch (error) {
             console.error('❌ Error guardando cambios:', error);
@@ -127,6 +140,7 @@ const ConfigRestaurante = () => {
         }
     };
 
+    // Función para descartar cambios
     const descartarCambios = () => {
         if (!cambiosRealizados) return;
 
@@ -142,16 +156,17 @@ const ConfigRestaurante = () => {
                     text: 'Descartar',
                     style: 'destructive',
                     onPress: () => {
-                        // Restaurar disponibilidad original
-                        const disponibilidadOriginal = obtenerDisponibilidadPlatos(user!.restaurantInfo!.restauranteId);
-                        setPlatosDisponibles(disponibilidadOriginal);
+                        // Restaurar a la disponibilidad original
+                        setPlatosDisponibles({ ...disponibilidadOriginal });
                         setCambiosRealizados(false);
+                        console.log('🔄 Cambios descartados, restaurando a:', disponibilidadOriginal);
                     }
                 }
             ]
         );
     };
 
+    // Función para agrupar platos por categoría
     const agruparPorCategoria = () => {
         if (!restauranteData?.menu) return {};
 
@@ -166,10 +181,12 @@ const ConfigRestaurante = () => {
         return grupos;
     };
 
+    // Función para formatear precio
     const formatearPrecio = (precio: number) => {
         return `${precio.toLocaleString('es-CO')}`;
     };
 
+    // Pantalla de carga
     if (!user?.restaurantInfo?.restauranteId || !restauranteData) {
         return (
             <SafeAreaView className="flex-1 bg-white">

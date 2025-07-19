@@ -19,6 +19,7 @@ const menuRestaurante = () => {
   const [calificacion, setCalificacion] = useState(0);
   const [categorias, setCategorias] = useState<string[]>([]);
 
+  // ✅ Usando el hook integrado para obtener datos actualizados
   const { obtenerRestaurantePorId } = useRestaurantes();
   const { obtenerCantidadTotalCarrito } = useCarrito();
 
@@ -40,14 +41,26 @@ const menuRestaurante = () => {
       const id = parseInt(idRestaurante);
       setRestauranteId(id);
 
+      // ✅ CAMBIO CRÍTICO: Usar obtenerRestaurantePorId que incluye disponibilidad actualizada
       const restaurante = obtenerRestaurantePorId(id);
 
       if (restaurante) {
+        // ✅ Los platos ya vienen con disponibilidad actualizada del AsyncStorage
         setItemsMenu(restaurante.menu);
         setImagenRestaurante(restaurante.imagen);
         setCalificacion(restaurante.calificacionRestaurante)
         setTiempoEntrega(restaurante.tiempoEntrega)
         setCategorias(restaurante.categorias)
+
+        console.log('📱 Menú cargado para estudiantes con disponibilidad actualizada:', {
+          restaurante: restaurante.nombreRestaurante,
+          platosDisponibles: restaurante.menu.filter(p => p.disponible).length,
+          platosTotal: restaurante.menu.length,
+          detalleDisponibilidad: restaurante.menu.map(p => ({
+            nombre: p.nombre,
+            disponible: p.disponible
+          }))
+        });
       }
     }
   };

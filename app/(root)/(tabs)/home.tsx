@@ -12,7 +12,7 @@ const Home = () => {
   const [universidadActual, setUniversidadActual] = useState('ICESI');
   const [restauranteSeleccionado, setRestauranteSeleccionado] = useState(0);
 
-  // Usar el hook personalizado
+  // ✅ Usar el hook integrado para obtener restaurantes con disponibilidad actualizada
   const {
     restaurantesFiltrados,
     setUniversidadSeleccionada
@@ -44,6 +44,13 @@ const Home = () => {
     await AsyncStorage.setItem('restauranteNombre', restaurante.nombreRestaurante);
 
     setRestauranteSeleccionado(restaurante.idRestaurante);
+
+    console.log('🏪 Estudiante seleccionó restaurante:', {
+      nombre: restaurante.nombreRestaurante,
+      platosDisponibles: restaurante.menu.filter((p: any) => p.disponible).length,
+      platosTotal: restaurante.menu.length
+    });
+
     router.push('/(root)/(restaurants)/menuRestaurante');
   };
 
@@ -94,7 +101,7 @@ const Home = () => {
                     elevation: 3,
                   }}
                 >
-                  {/* Imagen de fondo - ya procesada por el hook */}
+                  {/* Imagen de fondo - ya procesada por el hook con disponibilidad actualizada */}
                   {item.imagen && (
                     <View style={{
                       position: 'absolute',
@@ -105,7 +112,7 @@ const Home = () => {
                       opacity: 0.25
                     }}>
                       <ImageBackground
-                        source={item.imagen} // Ya viene procesada del hook
+                        source={item.imagen} // Ya viene procesada del hook con disponibilidad
                         style={{ flex: 1 }}
                         resizeMode="cover"
                       />
