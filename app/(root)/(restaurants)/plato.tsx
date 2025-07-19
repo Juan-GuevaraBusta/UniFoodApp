@@ -1,6 +1,7 @@
 /* eslint-disable prettier/prettier */
 // (root)/(restaurants)/plato.tsx
-import { Text, TouchableOpacity, View, ScrollView, Image, TextInput } from "react-native";
+import { Text, TouchableOpacity, View, ScrollView, Image, TextInput, Alert } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
@@ -71,6 +72,16 @@ const plato = () => {
   };
 
   const handleAgregarAlCarrito = async () => {
+    // ✅ Verificar disponibilidad antes de agregar al carrito
+    if (!platoActual?.disponible) {
+      Alert.alert(
+        'Plato no disponible',
+        'Este plato está temporalmente agotado y no puede ser agregado al carrito.',
+        [{ text: 'Entendido' }]
+      );
+      return;
+    }
+
     const platoCarrito = platoHook.crearPlatoParaCarrito();
 
     if (!platoCarrito || !platoHook.puedeAgregarAlCarrito) {
@@ -108,6 +119,43 @@ const plato = () => {
       <View className="flex-1 bg-white items-center justify-center">
         <Text className="text-[#132e3c] font-JakartaMedium">Cargando...</Text>
       </View>
+    );
+  }
+
+  // ✅ Verificar si el plato está disponible
+  if (!platoActual.disponible) {
+    return (
+      <>
+        <Stack.Screen options={{ headerShown: false }} />
+        <SafeAreaView className="flex-1 bg-white">
+          <View className="px-5 py-8">
+            <TouchableOpacity
+              onPress={() => router.back()}
+              className="mb-6"
+            >
+              <Text className="text-[#132e3c] text-lg font-JakartaBold">← Atrás</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View className="flex-1 justify-center items-center px-8">
+            <Text className="text-gray-400 text-6xl mb-4">😔</Text>
+            <Text className="text-[#132e3c] text-2xl font-JakartaBold text-center mb-2">
+              Plato no disponible
+            </Text>
+            <Text className="text-gray-600 font-JakartaMedium text-center mb-6">
+              Lo sentimos, {platoActual.nombre} está temporalmente agotado.
+            </Text>
+            <TouchableOpacity
+              onPress={() => router.back()}
+              className="bg-[#132e3c] px-8 py-4 rounded-xl"
+            >
+              <Text className="text-white font-JakartaBold text-base">
+                Ver otros platos
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </SafeAreaView>
+      </>
     );
   }
 
@@ -347,4 +395,3 @@ const plato = () => {
 };
 
 export default plato;
-

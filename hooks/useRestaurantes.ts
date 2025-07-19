@@ -16,6 +16,7 @@ export interface Plato {
     precio: number;
     categoria: string;
     imagen: any;
+    disponible: boolean;
     tipoPlato: 'simple' | 'fijo' | 'mixto' | 'personalizable';
     toppingsBase: Topping[];
     toppingsDisponibles: Topping[];
@@ -69,7 +70,37 @@ export const useRestaurantes = () => {
         return restaurante?.menu.find(p => p.idPlato === idPlato);
     };
 
-    // Funciones del carrito
+    // ✅ Nueva función para actualizar disponibilidad de platos
+    const actualizarDisponibilidadPlato = (idRestaurante: number, idPlato: number, disponible: boolean): boolean => {
+        try {
+            // En un entorno real, esto haría una llamada a la API/GraphQL
+            // Por ahora, simularemos la actualización local
+            console.log(`🔄 Actualizando disponibilidad - Restaurante: ${idRestaurante}, Plato: ${idPlato}, Disponible: ${disponible}`);
+
+            // Aquí podrías hacer la llamada a Amplify/GraphQL para actualizar la base de datos
+            // await updatePlato({ id: idPlato, disponible });
+
+            return true;
+        } catch (error) {
+            console.error('❌ Error actualizando disponibilidad:', error);
+            return false;
+        }
+    };
+
+    // ✅ Nueva función para obtener estado de disponibilidad actual
+    const obtenerDisponibilidadPlatos = (idRestaurante: number): { [key: number]: boolean } => {
+        const restaurante = obtenerRestaurantePorId(idRestaurante);
+        if (!restaurante) return {};
+
+        const disponibilidad: { [key: number]: boolean } = {};
+        restaurante.menu.forEach(plato => {
+            disponibilidad[plato.idPlato] = plato.disponible;
+        });
+
+        return disponibilidad;
+    };
+
+    // Funciones del carrito (sin cambios)
     const agregarAlCarrito = (platoCarrito: Omit<PlatoCarrito, 'idUnico' | 'fechaAgregado'>): string => {
         const idUnico = `${platoCarrito.idRestaurante}-${platoCarrito.plato.idPlato}-${Date.now()}-${Math.random()}`;
         const nuevoPlatoCarrito: PlatoCarrito = {
@@ -123,6 +154,10 @@ export const useRestaurantes = () => {
         // Funciones de obtención
         obtenerRestaurantePorId,
         obtenerPlatoPorId,
+
+        // ✅ Nuevas funciones de disponibilidad
+        actualizarDisponibilidadPlato,
+        obtenerDisponibilidadPlatos,
 
         // Funciones de carrito
         agregarAlCarrito,

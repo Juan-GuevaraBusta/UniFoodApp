@@ -17,6 +17,7 @@ export interface Plato {
     precio: number;
     categoria: string;
     imagen: any;
+    disponible: boolean;
     tipoPlato: 'simple' | 'fijo' | 'mixto' | 'personalizable';
     toppingsBase: Topping[];
     toppingsDisponibles: Topping[];

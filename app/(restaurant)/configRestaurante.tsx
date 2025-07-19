@@ -1,37 +1,35 @@
 /* eslint-disable prettier/prettier */
-import { Text, TouchableOpacity, View, FlatList, Image, Switch } from "react-native";
+import { Text, TouchableOpacity, View, FlatList, Image, Switch, Alert, ActivityIndicator } from "react-native";
 import { router } from 'expo-router';
 import { useState, useEffect } from 'react';
 import { useRestaurantes, type Plato } from '@/hooks/useRestaurantes';
 import { useAuth } from "@/hooks/useAuth";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { ArrowLeft, Star, Clock } from "lucide-react-native";
+import { ArrowLeft, Star, Clock, Save, RefreshCw } from "lucide-react-native";
 
 const ConfigRestaurante = () => {
     const { user, verificarSesion } = useAuth();
-    const { obtenerRestaurantePorId } = useRestaurantes();
+    const { obtenerRestaurantePorId, actualizarDisponibilidadPlato, obtenerDisponibilidadPlatos } = useRestaurantes();
     const [restauranteData, setRestauranteData] = useState<any>(null);
     const [platosDisponibles, setPlatosDisponibles] = useState<{ [key: number]: boolean }>({});
+    const [cambiosRealizados, setCambiosRealizados] = useState(false);
+    const [guardando, setGuardando] = useState(false);
 
-    // Verificar sesión al cargar el componente - IGUAL QUE EN HOME
+    // Verificar sesión al cargar el componente
     useEffect(() => {
         verificarSesion();
     }, []);
 
     useEffect(() => {
         if (user?.restaurantInfo?.restauranteId) {
-            // Pequeño delay para asegurar que los datos estén completamente cargados - IGUAL QUE EN HOME
             const timer = setTimeout(() => {
                 const restaurante = obtenerRestaurantePorId(user.restaurantInfo!.restauranteId);
                 setRestauranteData(restaurante);
 
-                // Inicializar disponibilidad de platos
+                // Cargar disponibilidad actual desde el JSON
                 if (restaurante?.menu) {
-                    const disponibilidadInicial: { [key: number]: boolean } = {};
-                    restaurante.menu.forEach((plato: any) => {
-                        disponibilidadInicial[plato.idPlato] = true; // Por defecto disponibles
-                    });
-                    setPlatosDisponibles(disponibilidadInicial);
+                    const disponibilidadActual = obtenerDisponibilidadPlatos(user.restaurantInfo!.restauranteId);
+                    setPlatosDisponibles(disponibilidadActual);
                 }
             }, 100);
 
@@ -40,10 +38,118 @@ const ConfigRestaurante = () => {
     }, [user]);
 
     const toggleDisponibilidadPlato = (idPlato: number) => {
-        setPlatosDisponibles(prev => ({
-            ...prev,
-            [idPlato]: !prev[idPlato]
-        }));
+        setPlatosDisponibles(prev => {
+            const nuevaDisponibilidad = {
+                ...prev,
+                [idPlato]: !prev[idPlato]
+            };
+
+            // Verificar si hay cambios comparando con el estado original
+            const disponibilidadOriginal = obtenerDisponibilidadPlatos(user!.restaurantInfo!.restauranteId);
+            const hayCambios = Object.keys(nuevaDisponibilidad).some(
+                platoId => nuevaDisponibilidad[parseInt(platoId)] !== disponibilidadOriginal[parseInt(platoId)]
+            );
+
+            setCambiosRealizados(hayCambios);
+            return nuevaDisponibilidad;
+        });
+    };
+
+    const guardarCambios = async () => {
+        if (!user?.restaurantInfo || !cambiosRealizados) return;
+
+        setGuardando(true);
+
+        try {
+            console.log('💾 Guardando cambios de disponibilidad...');
+
+            // Obtener la disponibilidad original para comparar
+            const disponibilidadOriginal = obtenerDisponibilidadPlatos(user.restaurantInfo.restauranteId);
+            const platosModificados: Array<{ plato: string, estado: string }> = [];
+
+            // Actualizar cada plato que haya cambiado
+            for (const [platoIdStr, nuevaDisponibilidad] of Object.entries(platosDisponibles)) {
+                const platoId = parseInt(platoIdStr);
+                const disponibilidadOriginalPlato = disponibilidadOriginal[platoId];
+
+                if (nuevaDisponibilidad !== disponibilidadOriginalPlato) {
+                    const success = await actualizarDisponibilidadPlato(
+                        user.restaurantInfo.restauranteId,
+                        platoId,
+                        nuevaDisponibilidad
+                    );
+
+                    if (success) {
+                        const plato = restauranteData.menu.find((p: any) => p.idPlato === platoId);
+                        platosModificados.push({
+                            plato: plato?.nombre || `Plato ${platoId}`,
+                            estado: nuevaDisponibilidad ? 'disponible' : 'no disponible'
+                        });
+                    }
+                }
+            }
+
+            // Simular tiempo de guardado
+            await new Promise(resolve => setTimeout(resolve, 1500));
+
+            if (platosModificados.length > 0) {
+                const resumenCambios = platosModificados
+                    .map(cambio => `• ${cambio.plato}: ${cambio.estado}`)
+                    .join('\n');
+
+                Alert.alert(
+                    '✅ Cambios guardados',
+                    `Se actualizaron ${platosModificados.length} plato(s):\n\n${resumenCambios}\n\nLos estudiantes verán estos cambios inmediatamente.`,
+                    [
+                        {
+                            text: 'Ver vista previa',
+                            onPress: () => router.push('/(restaurant)/viewRestaurante')
+                        },
+                        {
+                            text: 'Continuar editando',
+                            style: 'cancel'
+                        }
+                    ]
+                );
+            }
+
+            setCambiosRealizados(false);
+
+        } catch (error) {
+            console.error('❌ Error guardando cambios:', error);
+            Alert.alert(
+                'Error al guardar',
+                'No se pudieron guardar los cambios. Intenta nuevamente.',
+                [{ text: 'OK' }]
+            );
+        } finally {
+            setGuardando(false);
+        }
+    };
+
+    const descartarCambios = () => {
+        if (!cambiosRealizados) return;
+
+        Alert.alert(
+            'Descartar cambios',
+            '¿Estás seguro de que quieres descartar todos los cambios realizados?',
+            [
+                {
+                    text: 'Cancelar',
+                    style: 'cancel'
+                },
+                {
+                    text: 'Descartar',
+                    style: 'destructive',
+                    onPress: () => {
+                        // Restaurar disponibilidad original
+                        const disponibilidadOriginal = obtenerDisponibilidadPlatos(user!.restaurantInfo!.restauranteId);
+                        setPlatosDisponibles(disponibilidadOriginal);
+                        setCambiosRealizados(false);
+                    }
+                }
+            ]
+        );
     };
 
     const agruparPorCategoria = () => {
@@ -60,12 +166,10 @@ const ConfigRestaurante = () => {
         return grupos;
     };
 
-    // Función para formatear precio
     const formatearPrecio = (precio: number) => {
         return `${precio.toLocaleString('es-CO')}`;
     };
 
-    // MISMA LOGICA DE CARGA QUE EN HOME
     if (!user?.restaurantInfo?.restauranteId || !restauranteData) {
         return (
             <SafeAreaView className="flex-1 bg-white">
@@ -83,7 +187,6 @@ const ConfigRestaurante = () => {
         <SafeAreaView className="flex h-full bg-white">
             {/* Header con imagen de fondo */}
             <View className="relative w-full pt-12 pb-6 px-5">
-                {/* Imagen de fondo solo en el header con bordes curvos */}
                 <View className="absolute inset-0">
                     <Image
                         source={restauranteData.imagen}
@@ -97,25 +200,27 @@ const ConfigRestaurante = () => {
                     />
                 </View>
 
-                {/* Contenedor relativo para posicionar elementos */}
                 <View className="relative mb-4 h-12">
-                    {/* Botón X - Contenedor separado, posicionado a la izquierda */}
                     <TouchableOpacity
-                        onPress={() => router.back()}
+                        onPress={() => {
+                            if (cambiosRealizados) {
+                                descartarCambios();
+                            } else {
+                                router.back();
+                            }
+                        }}
                         className="absolute left-0 top-0 w-10 h-10 rounded-full flex items-center justify-center z-10"
                     >
                         <ArrowLeft size={24} color="#132e3c" />
                     </TouchableOpacity>
 
-                    {/* Título - Contenedor separado, centrado */}
                     <View className="absolute left-0 right-0 top-0 flex items-center justify-center z-10">
                         <Text className="text-[#132e3c] font-JakartaExtraBold text-3xl text-center absolute top-6 opacity-90">
-                            Nuestro menú
+                            Configurar menú
                         </Text>
                     </View>
                 </View>
 
-                {/* Caja azul centrada debajo del nombre */}
                 <View
                     className="bg-[#132e3c] px-16 py-4 rounded-full self-center relative z-10 p-4 mt-4"
                     style={{
@@ -126,10 +231,7 @@ const ConfigRestaurante = () => {
                         elevation: 4,
                     }}
                 >
-                    {/* Contenedor principal horizontal */}
                     <View className="flex-row items-center justify-between">
-
-                        {/* Columna de Calificación */}
                         <View className="items-center">
                             <Text className="text-white text-sm font-JakartaBold mb-2">
                                 Calificación
@@ -144,7 +246,6 @@ const ConfigRestaurante = () => {
 
                         <View style={{ width: 60 }}></View>
 
-                        {/* Columna de Entrega */}
                         <View className="items-center">
                             <Text className="text-white text-sm font-JakartaBold mb-2">
                                 Entrega
@@ -156,19 +257,18 @@ const ConfigRestaurante = () => {
                                 </Text>
                             </View>
                         </View>
-
                     </View>
                 </View>
             </View>
 
-            {/* Barra que mostrará las categorías principales del restaurante */}
+            {/* Barra de categorías */}
             <View className="px-10 bg-[#132e3c] items-center justify-center">
                 <Text className="text-white font-JakartaExtraBold m-4">
                     {restauranteData.categorias.join(' • ')}
                 </Text>
             </View>
 
-            {/* Lista del menú - fondo blanco sin imagen */}
+            {/* Lista del menú */}
             <View className="flex-1 px-5 pt-2 bg-white">
                 <FlatList
                     data={Object.entries(agruparPorCategoria())}
@@ -176,12 +276,10 @@ const ConfigRestaurante = () => {
                     showsVerticalScrollIndicator={false}
                     renderItem={({ item: [categoria, platos] }) => (
                         <View className="mb-6">
-                            {/* Título de la categoría con número */}
                             <Text className="text-[#132e3c] text-xl font-JakartaBold mb-4 ml-2">
                                 {Object.keys(agruparPorCategoria()).indexOf(categoria) + 1}. {categoria}
                             </Text>
 
-                            {/* Fila de platos de esta categoría */}
                             <FlatList
                                 data={platos}
                                 horizontal
@@ -200,11 +298,6 @@ const ConfigRestaurante = () => {
                                             elevation: 3,
                                         }}
                                     >
-                                        {/* Checkbox de edición en la esquina superior izquierda */}
-                                        <View className="absolute top-2 left-2 w-6 h-6 bg-white rounded border-2 border-[#132e3c] flex items-center justify-center z-10">
-                                            <Text className="text-[#132e3c] text-xs font-bold">✓</Text>
-                                        </View>
-
                                         {/* Imagen del plato */}
                                         <View className="h-32 bg-gray-200 rounded-t-xl mb-3 relative">
                                             <View className="absolute inset-0 bg-gray-300 rounded-t-xl flex items-center justify-center">
@@ -213,8 +306,8 @@ const ConfigRestaurante = () => {
 
                                             {/* Overlay de no disponible */}
                                             {!platosDisponibles[plato.idPlato] && (
-                                                <View className="absolute inset-0 bg-black opacity-50 rounded-t-xl flex items-center justify-center">
-                                                    <Text className="text-white font-JakartaBold text-sm">No disponible</Text>
+                                                <View className="absolute inset-0 bg-black opacity-60 rounded-t-xl flex items-center justify-center">
+                                                    <Text className="text-white font-JakartaBold text-sm">Agotado</Text>
                                                 </View>
                                             )}
                                         </View>
@@ -240,7 +333,7 @@ const ConfigRestaurante = () => {
                                                 />
                                                 <Text className={`ml-2 text-xs font-JakartaBold ${platosDisponibles[plato.idPlato] ? 'text-green-600' : 'text-red-600'
                                                     }`}>
-                                                    {platosDisponibles[plato.idPlato] ? 'Disponible' : 'No disponible'}
+                                                    {platosDisponibles[plato.idPlato] ? 'Disponible' : 'Agotado'}
                                                 </Text>
                                             </View>
                                         </View>
@@ -251,6 +344,68 @@ const ConfigRestaurante = () => {
                     )}
                 />
             </View>
+
+            {/* Footer fijo con botones de acción */}
+            {cambiosRealizados && (
+                <View className="bg-white border-t border-gray-200 px-5 py-4">
+                    {/* Mensaje de cambios pendientes */}
+                    <View className="mb-4 p-3 bg-yellow-50 rounded-xl border border-yellow-200">
+                        <Text className="text-yellow-800 font-JakartaBold text-sm text-center">
+                            ⚠️ Hay cambios sin guardar
+                        </Text>
+                        <Text className="text-yellow-700 font-JakartaMedium text-xs text-center mt-1">
+                            Los estudiantes verán los cambios después de guardar
+                        </Text>
+                    </View>
+
+                    {/* Botones de acción */}
+                    <View className="flex-row space-x-3">
+                        {/* Botón descartar */}
+                        <TouchableOpacity
+                            onPress={descartarCambios}
+                            disabled={guardando}
+                            className="flex-1 py-3 rounded-xl border-2 border-gray-300 flex-row items-center justify-center"
+                        >
+                            <RefreshCw size={18} color="#6B7280" />
+                            <Text className="text-gray-600 font-JakartaBold text-base ml-2">
+                                Descartar
+                            </Text>
+                        </TouchableOpacity>
+
+                        {/* Botón guardar */}
+                        <TouchableOpacity
+                            onPress={guardarCambios}
+                            disabled={guardando}
+                            className={`flex-2 py-3 rounded-xl flex-row items-center justify-center ${guardando ? 'bg-gray-400' : 'bg-[#132e3c]'
+                                }`}
+                            style={{
+                                flex: 2,
+                                shadowColor: '#000',
+                                shadowOffset: { width: 0, height: 2 },
+                                shadowOpacity: 0.2,
+                                shadowRadius: 4,
+                                elevation: 4,
+                            }}
+                        >
+                            {guardando ? (
+                                <>
+                                    <ActivityIndicator size="small" color="white" />
+                                    <Text className="text-white font-JakartaBold text-base ml-2">
+                                        Guardando...
+                                    </Text>
+                                </>
+                            ) : (
+                                <>
+                                    <Save size={18} color="white" />
+                                    <Text className="text-white font-JakartaBold text-base ml-2">
+                                        Guardar cambios
+                                    </Text>
+                                </>
+                            )}
+                        </TouchableOpacity>
+                    </View>
+                </View>
+            )}
         </SafeAreaView>
     );
 };

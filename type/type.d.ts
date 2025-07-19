@@ -47,6 +47,7 @@ declare interface Plato {
     precio: number;
     categoria: string;
     imagen: any;
+    disponible: boolean; // ← Nueva propiedad
     tipoPlato: 'simple' | 'fijo' | 'mixto' | 'personalizable';
     toppingsBase: Topping[];
     toppingsDisponibles: Topping[];
@@ -64,6 +65,7 @@ declare interface PlatoCarrito {
     idRestaurante: number;
     nombreRestaurante: string;
     nombreUniversidad: string;
+    universidadId: number; // ← Asegurándonos de que esté incluido
     plato: Plato;
     cantidad: number;
     comentarios: string;
@@ -121,4 +123,16 @@ declare interface AuthResult {
     role?: 'student' | 'restaurant_owner' | 'admin';
     needsConfirmation?: boolean;
     userId?: string;
+}
+
+// =============== GESTIÓN DE DISPONIBILIDAD ===============
+declare interface DisponibilidadUpdate {
+    restauranteId: number;
+    platoId: number;
+    disponible: boolean;
+    timestamp: Date;
+}
+
+declare interface DisponibilidadState {
+    [platoId: number]: boolean;
 }

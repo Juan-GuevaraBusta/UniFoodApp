@@ -1,5 +1,5 @@
 /* eslint-disable prettier/prettier */
-import { Text, TouchableOpacity, View, FlatList, Image } from "react-native";
+import { Text, TouchableOpacity, View, FlatList, Image, Alert } from "react-native";
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
@@ -53,6 +53,16 @@ const menuRestaurante = () => {
   };
 
   const seleccionarPlato = async (plato: Plato) => {
+    // ✅ Verificar si el plato está disponible antes de permitir la selección
+    if (!plato.disponible) {
+      Alert.alert(
+        'Plato no disponible',
+        `Lo sentimos, ${plato.nombre} está temporalmente agotado. Por favor elige otro plato.`,
+        [{ text: 'Entendido' }]
+      );
+      return;
+    }
+
     // Guardar plato en AsyncStorage para la siguiente pantalla
     await AsyncStorage.setItem('platoSeleccionado', plato.idPlato.toString());
     await AsyncStorage.setItem('platoNombre', plato.nombre);
@@ -85,9 +95,8 @@ const menuRestaurante = () => {
     <>
       <Stack.Screen options={{ headerShown: false }} />
       <View className="flex h-full bg-white">
-        {/* Header con imagen de fondo que llega hasta arriba del celular */}
+        {/* Header con imagen de fondo */}
         <View className="relative w-full pt-12 pb-6 px-5">
-          {/* Imagen de fondo solo en el header con bordes curvos */}
           <View className="absolute inset-0">
             <Image
               source={imagenRestaurante}
@@ -101,9 +110,7 @@ const menuRestaurante = () => {
             />
           </View>
 
-          {/* Contenedor relativo para posicionar elementos */}
           <View className="relative mb-4 h-12">
-            {/* Botón X - Contenedor separado, posicionado a la izquierda */}
             <TouchableOpacity
               onPress={() => router.back()}
               className="absolute left-0 top-0 w-10 h-10 rounded-full flex items-center justify-center z-10"
@@ -111,7 +118,6 @@ const menuRestaurante = () => {
               <Text className="text-[#132e3c] text-2xl font-JakartaBold">✕</Text>
             </TouchableOpacity>
 
-            {/* Botón del carrito - SIEMPRE VISIBLE */}
             <TouchableOpacity
               onPress={() => router.push('/(root)/(restaurants)/carrito')}
               className="absolute right-0 top-0 w-12 h-12 rounded-full bg-[#132e3c] flex items-center justify-center z-10"
@@ -126,7 +132,6 @@ const menuRestaurante = () => {
               )}
             </TouchableOpacity>
 
-            {/* Nombre del restaurante - Contenedor separado, centrado */}
             <View className="absolute left-0 right-0 top-0 flex items-center justify-center z-10">
               <Text className="text-[#132e3c] font-JakartaExtraBold text-5xl text-center absolute top-6 opacity-90">
                 {restauranteActual}
@@ -134,7 +139,6 @@ const menuRestaurante = () => {
             </View>
           </View>
 
-          {/* Caja azul centrada debajo del nombre */}
           <View
             className="bg-[#132e3c] px-16 py-4 rounded-full self-center relative z-10 p-4 mt-4"
             style={{
@@ -145,10 +149,7 @@ const menuRestaurante = () => {
               elevation: 4,
             }}
           >
-            {/* Contenedor principal horizontal */}
             <View className="flex-row items-center justify-between">
-
-              {/* Columna de Calificación */}
               <View className="items-center">
                 <Text className="text-white text-sm font-JakartaBold mb-2">
                   Calificación
@@ -161,9 +162,8 @@ const menuRestaurante = () => {
                 </View>
               </View>
 
-              <View style={{width:60}}></View>
+              <View style={{ width: 60 }}></View>
 
-              {/* Columna de Entrega */}
               <View className="items-center">
                 <Text className="text-white text-sm font-JakartaBold mb-2">
                   Entrega
@@ -175,20 +175,18 @@ const menuRestaurante = () => {
                   </Text>
                 </View>
               </View>
-
             </View>
           </View>
         </View>
 
-        {/* Barra que mostrará las categorías principales del restaurante */}
+        {/* Barra de categorías */}
         <View className="px-10 bg-[#132e3c] items-center justify-center">
           <Text className="text-white font-JakartaExtraBold m-4">
             {categorias.join(' • ')}
           </Text>
-
         </View>
 
-        {/* Lista del menú - fondo blanco sin imagen */}
+        {/* Lista del menú */}
         <View className="flex-1 px-5 pt-2 bg-white">
           <FlatList
             data={Object.entries(agruparPorCategoria())}
@@ -196,12 +194,10 @@ const menuRestaurante = () => {
             showsVerticalScrollIndicator={false}
             renderItem={({ item: [categoria, platos] }) => (
               <View className="mb-6">
-                {/* Título de la categoría */}
                 <Text className="text-[#132e3c] text-xl font-JakartaBold mb-4 ml-2">
                   {categoria}
                 </Text>
 
-                {/* Fila de platos de esta categoría */}
                 <FlatList
                   data={platos}
                   horizontal
@@ -211,40 +207,75 @@ const menuRestaurante = () => {
                   renderItem={({ item: plato }) => (
                     <TouchableOpacity
                       onPress={() => seleccionarPlato(plato)}
-                      className="bg-white rounded-xl mr-4 shadow-sm border border-gray-100"
+                      disabled={!plato.disponible} // ✅ Deshabilitar si no está disponible
+                      className={`bg-white rounded-xl mr-4 shadow-sm border border-gray-100 ${!plato.disponible ? 'opacity-60' : '' // ✅ Reducir opacidad si no está disponible
+                        }`}
                       style={{
                         width: 160,
                         shadowColor: '#000',
                         shadowOffset: { width: 0, height: 2 },
-                        shadowOpacity: 0.1,
+                        shadowOpacity: plato.disponible ? 0.1 : 0.05, // ✅ Menos sombra si no está disponible
                         shadowRadius: 4,
-                        elevation: 3,
+                        elevation: plato.disponible ? 3 : 1, // ✅ Menos elevación si no está disponible
                       }}
                     >
                       {/* Imagen del plato */}
                       <View className="h-32 bg-gray-200 rounded-t-xl mb-3 relative">
                         <View className="absolute inset-0 bg-gray-300 rounded-t-xl flex items-center justify-center">
-                          <Image source={plato.imagen}/>
+                          <Image
+                            source={plato.imagen}
+                            className="w-full h-full rounded-t-xl"
+                            style={{
+                              opacity: plato.disponible ? 1 : 0.5 // ✅ Imagen menos visible si no está disponible
+                            }}
+                          />
                         </View>
 
-                        {/* Botón + en la esquina */}
-                        <TouchableOpacity
-                          className="absolute top-2 right-2 w-8 h-8 bg-[#132e3c] rounded-full flex items-center justify-center "
-                          onPress={() => seleccionarPlato(plato)}
-                        >
-                          <Text className="text-white text-lg font-bold">+</Text>
-                        </TouchableOpacity>
+                        {/* ✅ Overlay de agotado */}
+                        {!plato.disponible && (
+                          <View className="absolute inset-0 bg-black bg-opacity-60 rounded-t-xl flex items-center justify-center">
+                            <View className="bg-red-500 px-3 py-1 rounded-full">
+                              <Text className="text-white font-JakartaBold text-xs">
+                                AGOTADO
+                              </Text>
+                            </View>
+                          </View>
+                        )}
+
+                        {/* ✅ Botón + solo si está disponible */}
+                        {plato.disponible && (
+                          <TouchableOpacity
+                            className="absolute top-2 right-2 w-8 h-8 bg-[#132e3c] rounded-full flex items-center justify-center"
+                            onPress={() => seleccionarPlato(plato)}
+                          >
+                            <Text className="text-white text-lg font-bold">+</Text>
+                          </TouchableOpacity>
+                        )}
                       </View>
 
                       {/* Información del plato */}
                       <View className="px-3 pb-4 items-center justify-center">
-                        <Text className="text-[#132e3c] text-base font-JakartaExtraBold mb-1" numberOfLines={2}>
+                        <Text
+                          className={`text-base font-JakartaExtraBold mb-1 text-center ${plato.disponible ? 'text-[#132e3c]' : 'text-gray-500'
+                            }`}
+                          numberOfLines={2}
+                        >
                           {plato.nombre}
                         </Text>
 
-                        <Text className="text-[#132e3c] text-lg font-JakartaLight">
+                        <Text
+                          className={`text-lg font-JakartaLight ${plato.disponible ? 'text-[#132e3c]' : 'text-gray-400'
+                            }`}
+                        >
                           {formatearPrecio(plato.precio)}
                         </Text>
+
+                        {/* ✅ Mensaje de no disponible */}
+                        {!plato.disponible && (
+                          <Text className="text-red-500 font-JakartaBold text-xs mt-1 text-center">
+                            No disponible
+                          </Text>
+                        )}
                       </View>
                     </TouchableOpacity>
                   )}

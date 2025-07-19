@@ -19,6 +19,7 @@
                 "precio": 12000,
                 "categoria": "Pasta",
                 "imagen": "bowlPrueba",
+                "disponible": true,
                 "tipoPlato": "personalizable",
                 "toppingsBase": [],
                 "toppingsDisponibles": [
@@ -46,6 +47,7 @@
                 "precio": 15000,
                 "categoria": "Hamburguesa",
                 "imagen": "bowlPrueba",
+                "disponible": true,
                 "tipoPlato": "mixto",
                 "toppingsBase": [
                     {
@@ -99,6 +101,7 @@
                 "precio": 3800,
                 "categoria": "bebidas",
                 "imagen": "bowlPrueba",
+                "disponible": true,
                 "tipoPlato": "simple",
                 "toppingsBase": [],
                 "toppingsDisponibles": []
@@ -110,6 +113,7 @@
                 "precio": 2800,
                 "categoria": "bebidas",
                 "imagen": "bowlPrueba",
+                "disponible": false,
                 "tipoPlato": "simple",
                 "toppingsBase": [],
                 "toppingsDisponibles": []
@@ -121,6 +125,7 @@
                 "precio": 20000,
                 "categoria": "Hamburguesa",
                 "imagen": "bowlPrueba",
+                "disponible": true,
                 "tipoPlato": "fijo",
                 "toppingsBase": [
                     {
@@ -168,6 +173,7 @@
                 "precio": 18000,
                 "categoria": "Hamburguesa",
                 "imagen": "bowlPrueba",
+                "disponible": true,
                 "tipoPlato": "mixto",
                 "toppingsBase": [
                     {
@@ -236,6 +242,7 @@
                 "precio": 17000,
                 "categoria": "Bowl",
                 "imagen": "bowlPrueba",
+                "disponible": true,
                 "tipoPlato": "personalizable",
                 "toppingsBase": [],
                 "toppingsDisponibles": [
@@ -278,6 +285,7 @@
                 "precio": 15000,
                 "categoria": "Pasta",
                 "imagen": "bowlPrueba",
+                "disponible": false,
                 "tipoPlato": "fijo",
                 "toppingsBase": [
                     {
@@ -310,6 +318,7 @@
                 "precio": 3800,
                 "categoria": "bebidas",
                 "imagen": "bowlPrueba",
+                "disponible": true,
                 "tipoPlato": "simple",
                 "toppingsBase": [],
                 "toppingsDisponibles": []
@@ -321,6 +330,7 @@
                 "precio": 2800,
                 "categoria": "bebidas",
                 "imagen": "bowlPrueba",
+                "disponible": true,
                 "tipoPlato": "simple",
                 "toppingsBase": [],
                 "toppingsDisponibles": []
@@ -347,6 +357,7 @@
                 "precio": 17000,
                 "categoria": "Bowl",
                 "imagen": "bowlPrueba",
+                "disponible": true,
                 "tipoPlato": "mixto",
                 "toppingsBase": [
                     {
@@ -395,6 +406,7 @@
                 "precio": 15000,
                 "categoria": "Pasta",
                 "imagen": "bowlPrueba",
+                "disponible": true,
                 "tipoPlato": "personalizable",
                 "toppingsBase": [],
                 "toppingsDisponibles": [
@@ -443,6 +455,7 @@
                 "precio": 3800,
                 "categoria": "bebidas",
                 "imagen": "bowlPrueba",
+                "disponible": true,
                 "tipoPlato": "simple",
                 "toppingsBase": [],
                 "toppingsDisponibles": []
@@ -454,6 +467,7 @@
                 "precio": 2800,
                 "categoria": "bebidas",
                 "imagen": "bowlPrueba",
+                "disponible": true,
                 "tipoPlato": "simple",
                 "toppingsBase": [],
                 "toppingsDisponibles": []
@@ -480,6 +494,7 @@
                 "precio": 19000,
                 "categoria": "Chilaquiles",
                 "imagen": "bowlPrueba",
+                "disponible": true,
                 "tipoPlato": "fijo",
                 "toppingsBase": [
                     {
@@ -522,6 +537,7 @@
                 "precio": 17500,
                 "categoria": "Burritos",
                 "imagen": "bowlPrueba",
+                "disponible": true,
                 "tipoPlato": "mixto",
                 "toppingsBase": [
                     {
@@ -575,6 +591,7 @@
                 "precio": 4000,
                 "categoria": "bebidas",
                 "imagen": "bowlPrueba",
+                "disponible": true,
                 "tipoPlato": "simple",
                 "toppingsBase": [],
                 "toppingsDisponibles": []
@@ -586,6 +603,7 @@
                 "precio": 3000,
                 "categoria": "bebidas",
                 "imagen": "bowlPrueba",
+                "disponible": false,
                 "tipoPlato": "simple",
                 "toppingsBase": [],
                 "toppingsDisponibles": []
@@ -597,6 +615,7 @@
                 "precio": 17500,
                 "categoria": "Burritos",
                 "imagen": "bowlPrueba",
+                "disponible": true,
                 "tipoPlato": "fijo",
                 "toppingsBase": [
                     {
@@ -639,6 +658,7 @@
                 "precio": 17500,
                 "categoria": "Burritos",
                 "imagen": "bowlPrueba",
+                "disponible": true,
                 "tipoPlato": "personalizable",
                 "toppingsBase": [],
                 "toppingsDisponibles": [
