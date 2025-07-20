@@ -1,43 +1,85 @@
 /* eslint-disable prettier/prettier */
-import { Text, TouchableOpacity, View, FlatList, ImageBackground } from "react-native";
+// app/(root)/(tabs)/home.tsx - VERSIÓN CORREGIDA
+import { Text, TouchableOpacity, View, FlatList, ImageBackground, RefreshControl } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from 'expo-router';
 import { useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useCallback } from 'react';
-import { useRestaurantes } from '@/hooks/useRestaurantes'; // Hook personalizado
+import { useRestaurantes } from '@/hooks/useRestaurantes';
 
 const Home = () => {
   const [universidadActual, setUniversidadActual] = useState('ICESI');
   const [restauranteSeleccionado, setRestauranteSeleccionado] = useState(0);
+  const [refreshing, setRefreshing] = useState(false);
 
   // ✅ Usar el hook integrado para obtener restaurantes con disponibilidad actualizada
   const {
     restaurantesFiltrados,
-    setUniversidadSeleccionada
+    setUniversidadSeleccionada,
+    isLoadingDisponibilidad,
+    forzarRecargaDisponibilidad,
+    disponibilidadLocal // Para debugging
   } = useRestaurantes();
 
-  // Se ejecuta cada vez que la pantalla recibe foco
+  // ✅ CRÍTICO: Se ejecuta cada vez que la pantalla recibe foco
   useFocusEffect(
     useCallback(() => {
+      console.log('📱 Home - Pantalla enfocada, cargando datos...');
       cargarUniversidadActual();
     }, [])
   );
 
+  // ✅ Función para cargar universidad y forzar actualización
   const cargarUniversidadActual = async () => {
-    const nombre = await AsyncStorage.getItem('universidadNombre');
-    const id = await AsyncStorage.getItem('universidadSeleccionada');
+    try {
+      const nombre = await AsyncStorage.getItem('universidadNombre');
+      const id = await AsyncStorage.getItem('universidadSeleccionada');
 
-    if (nombre) {
-      setUniversidadActual(nombre);
-    }
+      if (nombre) {
+        setUniversidadActual(nombre);
+      }
 
-    if (id) {
-      const universidadIdNum = parseInt(id);
-      setUniversidadSeleccionada(universidadIdNum);
+      if (id) {
+        const universidadIdNum = parseInt(id);
+        setUniversidadSeleccionada(universidadIdNum);
+
+        console.log('🏫 Universidad seleccionada:', {
+          nombre,
+          id: universidadIdNum
+        });
+      }
+
+      // ✅ Forzar recarga de disponibilidad al enfocar
+      await forzarRecargaDisponibilidad();
+
+      // ✅ Log para verificar estado de disponibilidad
+      console.log('📊 Estado actual de disponibilidad:', disponibilidadLocal);
+
+    } catch (error) {
+      console.error('❌ Error cargando universidad:', error);
     }
   };
+
+  // ✅ Función para refrescar manualmente (pull-to-refresh)
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+
+    try {
+      console.log('🔄 Refrescando datos de restaurantes...');
+      await forzarRecargaDisponibilidad();
+
+      // Pequeña pausa para UX
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      console.log('✅ Datos refrescados');
+    } catch (error) {
+      console.error('❌ Error refrescando:', error);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [forzarRecargaDisponibilidad]);
 
   const seleccionarRestaurante = async (restaurante: any) => {
     await AsyncStorage.setItem('restauranteSeleccionado', restaurante.idRestaurante.toString());
@@ -45,10 +87,16 @@ const Home = () => {
 
     setRestauranteSeleccionado(restaurante.idRestaurante);
 
+    // ✅ Log detallado para verificar disponibilidad al seleccionar
     console.log('🏪 Estudiante seleccionó restaurante:', {
       nombre: restaurante.nombreRestaurante,
+      id: restaurante.idRestaurante,
+      platosTotal: restaurante.menu.length,
       platosDisponibles: restaurante.menu.filter((p: any) => p.disponible).length,
-      platosTotal: restaurante.menu.length
+      detalleDisponibilidad: restaurante.menu.map((p: any) => ({
+        nombre: p.nombre,
+        disponible: p.disponible
+      }))
     });
 
     router.push('/(root)/(restaurants)/menuRestaurante');
@@ -70,6 +118,15 @@ const Home = () => {
             <Text className="text-white text-xl">📍</Text>
           </View>
         </TouchableOpacity>
+
+        {/* ✅ Indicador de estado de carga */}
+        {isLoadingDisponibilidad && (
+          <View className="mt-2 p-2 bg-blue-50 rounded-lg">
+            <Text className="text-blue-600 text-xs font-JakartaMedium text-center">
+              🔄 Actualizando disponibilidad de platos...
+            </Text>
+          </View>
+        )}
       </View>
 
       {/* Lista de restaurantes */}
@@ -79,8 +136,21 @@ const Home = () => {
             data={restaurantesFiltrados}
             keyExtractor={(item) => item.idRestaurante.toString()}
             showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                tintColor="#132e3c"
+                title="Actualizando restaurantes..."
+                titleColor="#132e3c"
+              />
+            }
             renderItem={({ item }) => {
               const isSelected = restauranteSeleccionado === item.idRestaurante;
+
+              // ✅ Calcular platos disponibles en tiempo real
+              const platosDisponibles = item.menu.filter(p => p.disponible).length;
+              const platosTotal = item.menu.length;
 
               return (
                 <TouchableOpacity
@@ -101,7 +171,7 @@ const Home = () => {
                     elevation: 3,
                   }}
                 >
-                  {/* Imagen de fondo - ya procesada por el hook con disponibilidad actualizada */}
+                  {/* Imagen de fondo */}
                   {item.imagen && (
                     <View style={{
                       position: 'absolute',
@@ -112,7 +182,7 @@ const Home = () => {
                       opacity: 0.25
                     }}>
                       <ImageBackground
-                        source={item.imagen} // Ya viene procesada del hook con disponibilidad
+                        source={item.imagen}
                         style={{ flex: 1 }}
                         resizeMode="cover"
                       />
@@ -141,6 +211,18 @@ const Home = () => {
                       }}>
                         {item.categorias.join(' • ')}
                       </Text>
+
+                      {/* ✅ Mostrar información de disponibilidad */}
+                      <Text style={{
+                        fontSize: 12,
+                        color: '#FFFFFF',
+                        marginTop: 2,
+                        textShadowColor: 'rgba(0,0,0,0.8)',
+                        textShadowOffset: { width: 1, height: 1 },
+                        textShadowRadius: 1
+                      }}>
+                        {platosDisponibles} de {platosTotal} platos disponibles
+                      </Text>
                     </View>
                   </View>
                 </TouchableOpacity>
@@ -157,9 +239,31 @@ const Home = () => {
               En {universidadActual} aún no tenemos restaurantes registrados.
               ¡Pronto habrá más opciones!
             </Text>
+
+            {/* Botón para refrescar manualmente */}
+            <TouchableOpacity
+              onPress={onRefresh}
+              className="mt-4 bg-[#132e3c] px-6 py-3 rounded-xl"
+            >
+              <Text className="text-white font-JakartaBold">
+                Actualizar
+              </Text>
+            </TouchableOpacity>
           </View>
         )}
       </View>
+
+      {/* ✅ Indicador de última actualización (opcional, para debugging) */}
+      {__DEV__ && (
+        <View className="px-5 py-2 bg-gray-50">
+          <Text className="text-gray-500 text-xs text-center">
+            🔧 DEV: Última actualización: {new Date().toLocaleTimeString()}
+          </Text>
+          <Text className="text-gray-500 text-xs text-center mt-1">
+            Disponibilidad cargada: {Object.keys(disponibilidadLocal).length} restaurantes
+          </Text>
+        </View>
+      )}
     </SafeAreaView>
   );
 };

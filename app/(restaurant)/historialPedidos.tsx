@@ -92,7 +92,7 @@ const HistorialPedidos = () => {
             <View className="px-5 py-6 border-b border-gray-200">
                 <View className="flex-row items-center justify-between">
                     <TouchableOpacity
-                        onPress={() => router.push("/(restaurant)/home")}
+                        onPress={() => router.push("/(restaurant)/(tabs)/home")}
                         className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center"
                     >
                         <Home size={20} color="#132e3c" />
