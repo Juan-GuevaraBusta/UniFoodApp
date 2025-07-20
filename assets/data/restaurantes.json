@@ -113,7 +113,7 @@
                 "precio": 2800,
                 "categoria": "bebidas",
                 "imagen": "bowlPrueba",
-                "disponible": false,
+                "disponible": true,
                 "tipoPlato": "simple",
                 "toppingsBase": [],
                 "toppingsDisponibles": []
@@ -285,7 +285,7 @@
                 "precio": 15000,
                 "categoria": "Pasta",
                 "imagen": "bowlPrueba",
-                "disponible": false,
+                "disponible": true,
                 "tipoPlato": "fijo",
                 "toppingsBase": [
                     {
@@ -603,7 +603,7 @@
                 "precio": 3000,
                 "categoria": "bebidas",
                 "imagen": "bowlPrueba",
-                "disponible": false,
+                "disponible": true,
                 "tipoPlato": "simple",
                 "toppingsBase": [],
                 "toppingsDisponibles": []

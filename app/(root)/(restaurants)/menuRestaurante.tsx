@@ -1,5 +1,5 @@
 /* eslint-disable prettier/prettier */
-// app/(root)/(restaurants)/menuRestaurante.tsx - SOLUCIÓN FINAL AL TIMING
+// app/(root)/(restaurants)/menuRestaurante.tsx - CORREGIDO PARA DISPONIBILIDAD
 import { Text, TouchableOpacity, View, FlatList, Image, Alert, RefreshControl } from "react-native";
 import { router } from 'expo-router';
 import { useState, useEffect } from 'react';
@@ -91,7 +91,7 @@ const menuRestaurante = () => {
     }
   };
 
-  // ✅ PASO 2: Cargar menú con disponibilidad actualizada
+  // ✅ PASO 2: Cargar menú con disponibilidad actualizada - MEJORADO con logging detallado
   const cargarMenuConDisponibilidad = async (restauranteId?: number) => {
     try {
       const id = restauranteId || idRestaurante;
@@ -103,6 +103,17 @@ const menuRestaurante = () => {
       const restaurante = obtenerRestaurantePorId(id);
 
       if (restaurante) {
+        // ✅ VERIFICACIÓN DETALLADA de cada plato
+        console.log('🔍 VERIFICACIÓN DETALLADA DE DISPONIBILIDAD:');
+        restaurante.menu.forEach(plato => {
+          console.log(`🍽️ Plato: ${plato.nombre}`);
+          console.log(`   - ID: ${plato.idPlato}`);
+          console.log(`   - Disponible en JSON original: ${plato.disponible}`);
+          console.log(`   - Disponibilidad actual procesada: ${plato.disponible}`);
+          console.log(`   - Disponibilidad local AsyncStorage: ${disponibilidadLocal[id] ? disponibilidadLocal[id][plato.idPlato] : 'No guardada'}`);
+          console.log('   ---');
+        });
+
         setItemsMenu(restaurante.menu);
 
         console.log('✅ Menú cargado con disponibilidad:', {
@@ -112,7 +123,8 @@ const menuRestaurante = () => {
           detalleDisponibilidad: restaurante.menu.map(p => ({
             id: p.idPlato,
             nombre: p.nombre,
-            disponible: p.disponible
+            disponible: p.disponible,
+            disponibleOriginal: p.disponible // Para comparar
           }))
         });
       } else {
@@ -155,9 +167,30 @@ const menuRestaurante = () => {
     }
   }, [idRestaurante, precargarDisponibilidadRestaurante, forzarRecargaDisponibilidad]);
 
+  // ✅ MEJORADA: Función para seleccionar plato con verificación doble
   const seleccionarPlato = async (plato: Plato) => {
-    // ✅ Verificar si el plato está disponible antes de permitir la selección
-    if (!plato.disponible) {
+    // ✅ VERIFICACIÓN DOBLE de disponibilidad
+    console.log('🎯 Usuario seleccionó plato:', {
+      nombre: plato.nombre,
+      id: plato.idPlato,
+      disponibleEnObjeto: plato.disponible,
+      restauranteId: idRestaurante
+    });
+
+    // ✅ Verificar disponibilidad actual desde el hook
+    const restauranteActualizado = obtenerRestaurantePorId(idRestaurante);
+    const platoActualizado = restauranteActualizado?.menu.find(p => p.idPlato === plato.idPlato);
+
+    console.log('🔍 Verificación actualizada:', {
+      platoEncontrado: !!platoActualizado,
+      disponibleActualizado: platoActualizado?.disponible,
+    });
+
+    // ✅ Usar la disponibilidad más actualizada
+    const estaDisponible = platoActualizado?.disponible ?? plato.disponible;
+
+    if (!estaDisponible) {
+      console.log('❌ Plato NO disponible, mostrando alerta');
       Alert.alert(
         'Plato no disponible',
         `Lo sentimos, ${plato.nombre} está temporalmente agotado. Por favor elige otro plato.`,
@@ -165,6 +198,8 @@ const menuRestaurante = () => {
       );
       return;
     }
+
+    console.log('✅ Plato disponible, navegando a detalles');
 
     // Guardar plato en AsyncStorage para la siguiente pantalla
     await AsyncStorage.setItem('platoSeleccionado', plato.idPlato.toString());

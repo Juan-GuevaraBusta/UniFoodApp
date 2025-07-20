@@ -1,17 +1,13 @@
 /* eslint-disable prettier/prettier */
-// app/(root)/(restaurants)/carrito.tsx - Actualizado con Amplify
+// app/(root)/(restaurants)/carrito.tsx - Actualizado para navegar a pago
 import { Text, TouchableOpacity, View, ScrollView, Image, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from 'expo-router';
 import { useCarrito } from '@/context/contextCarrito';
-import { useAmplifyData } from "@/hooks/useAmplifyData";
-import { useState } from 'react';
 import { Stack } from "expo-router";
-import { Plus, Minus, Trash2, ArrowLeft } from "lucide-react-native";
+import { Plus, Minus, Trash2, ArrowLeft, CreditCard } from "lucide-react-native";
 
 const Carrito = () => {
-  const [isProcessing, setIsProcessing] = useState(false);
-
   const {
     carrito,
     actualizarCantidadCarrito,
@@ -20,8 +16,6 @@ const Carrito = () => {
     obtenerCantidadTotalCarrito,
     limpiarCarrito
   } = useCarrito();
-
-  const { crearPedido } = useAmplifyData();
 
   // Función para formatear precio
   const formatearPrecio = (precio: number) => {
@@ -33,75 +27,18 @@ const Carrito = () => {
   const tarifaServicio = Math.round(subtotal * 0.05); // 5% de tarifa de servicio
   const total = subtotal + tarifaServicio;
 
-  // Función para proceder al pago
+  // Función para proceder al pago - ACTUALIZADA
   const procederAlPago = async () => {
     if (carrito.length === 0) {
       Alert.alert('Error', 'El carrito está vacío');
       return;
     }
 
-    Alert.alert(
-      'Confirmar pedido',
-      `¿Estás seguro de realizar este pedido por ${formatearPrecio(total)}?`,
-      [
-        {
-          text: 'Cancelar',
-          style: 'cancel'
-        },
-        {
-          text: 'Confirmar',
-          onPress: confirmarPedido
-        }
-      ]
-    );
-  };
-
-  const confirmarPedido = async () => {
-    setIsProcessing(true);
-
-    try {
-      console.log('🛒 Procesando pedido con carrito:', carrito);
-
-      const resultado = await crearPedido(carrito, total);
-
-      if (resultado.success) {
-        Alert.alert(
-          '¡Pedido realizado!',
-          `Tu pedido #${resultado.numeroOrden} ha sido enviado al restaurante. Te notificaremos cuando esté listo.`,
-          [
-            {
-              text: 'Ver mis pedidos',
-              onPress: () => {
-                limpiarCarrito();
-                // Aquí podrías navegar a una pantalla de "Mis Pedidos"
-                router.replace('/(root)/(tabs)/home');
-              }
-            },
-            {
-              text: 'Continuar comprando',
-              onPress: () => {
-                limpiarCarrito();
-                router.replace('/(root)/(tabs)/home');
-              }
-            }
-          ]
-        );
-      } else {
-        console.error('❌ Error en el pedido:', resultado.error);
-        Alert.alert(
-          'Error al procesar pedido',
-          resultado.error || 'Ha ocurrido un error inesperado. Intenta nuevamente.'
-        );
-      }
-    } catch (error) {
-      console.error('❌ Error inesperado:', error);
-      Alert.alert(
-        'Error',
-        'Ha ocurrido un error inesperado. Verifica tu conexión e intenta nuevamente.'
-      );
-    } finally {
-      setIsProcessing(false);
-    }
+    // Navegar a la pantalla de pago con el total
+    router.push({
+      pathname: '/(root)/(restaurants)/pagoPlato',
+      params: { total: total.toString() }
+    });
   };
 
   if (carrito.length === 0) {
@@ -303,7 +240,7 @@ const Carrito = () => {
           <View className="h-32" />
         </ScrollView>
 
-        {/* Footer con totales y botón de pago */}
+        {/* Footer con totales y botón de proceder al pago - ACTUALIZADO */}
         <View className="bg-white border-t border-gray-200 px-5 py-4">
           {/* Resumen de costos */}
           <View className="mb-4">
@@ -337,12 +274,10 @@ const Carrito = () => {
             </View>
           </View>
 
-          {/* Botón de proceder al pago */}
+          {/* Botón de proceder al pago - ACTUALIZADO */}
           <TouchableOpacity
             onPress={procederAlPago}
-            disabled={isProcessing}
-            className={`py-4 rounded-xl flex items-center justify-center ${isProcessing ? 'bg-gray-400' : 'bg-[#132e3c]'
-              }`}
+            className="py-4 rounded-xl flex-row items-center justify-center bg-[#132e3c]"
             style={{
               shadowColor: '#000',
               shadowOffset: { width: 0, height: 2 },
@@ -351,8 +286,9 @@ const Carrito = () => {
               elevation: 4,
             }}
           >
-            <Text className="text-white font-JakartaBold text-lg">
-              {isProcessing ? 'Procesando...' : `Realizar pedido - ${formatearPrecio(total)}`}
+            <CreditCard size={20} color="white" />
+            <Text className="text-white font-JakartaBold text-lg ml-3">
+              Proceder al pago - {formatearPrecio(total)}
             </Text>
           </TouchableOpacity>
         </View>

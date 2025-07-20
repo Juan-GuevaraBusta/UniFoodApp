@@ -1,5 +1,5 @@
 /* eslint-disable prettier/prettier */
-// (root)/(restaurants)/plato.tsx
+// (root)/(restaurants)/plato.tsx - CORREGIDO para universidadId
 import { Text, TouchableOpacity, View, ScrollView, Image, TextInput, Alert } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from 'expo-router';
@@ -19,8 +19,8 @@ const plato = () => {
   const [idRestaurante, setIdRestaurante] = useState(0);
   const [restauranteNombre, setRestauranteNombre] = useState('');
   const [platoNombre, setPlatoNombre] = useState('');
-  const [universidadActual, setUniversidadActual] = useState('')
-  const [universidadId, setUniversidadId] = useState(1)
+  const [universidadActual, setUniversidadActual] = useState('');
+  const [universidadId, setUniversidadId] = useState(0); // ✅ CORREGIDO: inicializar en 0
 
   const { obtenerPlatoPorId } = useRestaurantes();
   const { agregarAlCarrito, obtenerCantidadTotalCarrito } = useCarrito();
@@ -31,7 +31,7 @@ const plato = () => {
     idRestaurante,
     nombreRestaurante: restauranteNombre,
     nombreUniversidad: universidadActual,
-    universidadId
+    universidadId // ✅ Pasar el valor correcto
   });
 
   useFocusEffect(
@@ -40,34 +40,82 @@ const plato = () => {
     }, [])
   );
 
+  // ✅ CORREGIDO: Cargar también universidadId desde AsyncStorage
   const cargarDatosPlato = async () => {
-    const platoId = await AsyncStorage.getItem('platoSeleccionado');
-    const restauranteId = await AsyncStorage.getItem('restauranteSeleccionado');
-    const nombreRestaurante = await AsyncStorage.getItem('restauranteNombre');
-    const nombrePlato = await AsyncStorage.getItem('platoNombre');
-    const nombreUniversidad = await AsyncStorage.getItem('universidadNombre')
+    try {
+      // ✅ Cargar todos los datos necesarios
+      const [
+        platoId,
+        restauranteId,
+        nombreRestaurante,
+        nombrePlato,
+        nombreUniversidad,
+        universidadIdStr
+      ] = await Promise.all([
+        AsyncStorage.getItem('platoSeleccionado'),
+        AsyncStorage.getItem('restauranteSeleccionado'),
+        AsyncStorage.getItem('restauranteNombre'),
+        AsyncStorage.getItem('platoNombre'),
+        AsyncStorage.getItem('universidadNombre'),
+        AsyncStorage.getItem('universidadSeleccionada') // ✅ CRÍTICO: Cargar universidadId
+      ]);
 
-    if (restauranteId && platoId) {
-      const idRest = parseInt(restauranteId);
-      const idPlato = parseInt(platoId);
+      console.log('📱 Cargando datos del plato:', {
+        platoId,
+        restauranteId,
+        nombreRestaurante,
+        nombrePlato,
+        nombreUniversidad,
+        universidadIdStr,
+      });
 
-      setIdRestaurante(idRest);
+      if (restauranteId && platoId) {
+        const idRest = parseInt(restauranteId);
+        const idPlato = parseInt(platoId);
+        setIdRestaurante(idRest);
 
-      const plato = obtenerPlatoPorId(idRest, idPlato);
-      if (plato) {
-        setPlatoActual(plato);
+        const plato = obtenerPlatoPorId(idRest, idPlato);
+        if (plato) {
+          setPlatoActual(plato);
+          console.log('✅ Plato cargado:', plato.nombre);
+        }
       }
-    }
 
-    if (nombreRestaurante) {
-      setRestauranteNombre(nombreRestaurante);
-    }
+      if (nombreRestaurante) {
+        setRestauranteNombre(nombreRestaurante);
+      }
 
-    if (nombrePlato) {
-      setPlatoNombre(nombrePlato);
-    }
-    if (nombreUniversidad) {
-      setUniversidadActual(nombreUniversidad)
+      if (nombrePlato) {
+        setPlatoNombre(nombrePlato);
+      }
+
+      if (nombreUniversidad) {
+        setUniversidadActual(nombreUniversidad);
+      }
+
+      // ✅ CRÍTICO: Establecer universidadId correctamente
+      if (universidadIdStr) {
+        const idUniv = parseInt(universidadIdStr);
+        setUniversidadId(idUniv);
+        console.log('✅ Universidad ID establecido:', idUniv);
+      } else {
+        console.error('❌ No se encontró universidadSeleccionada en AsyncStorage');
+        // ✅ Fallback: tratar de obtenerlo del restaurante
+        if (restauranteId) {
+          const idRest = parseInt(restauranteId);
+          // Mapeo manual como fallback
+          if (idRest === 1 || idRest === 2) {
+            setUniversidadId(1); // ICESI
+            console.log('🔄 Fallback: Universidad ID establecido a 1 (ICESI)');
+          } else if (idRest === 3 || idRest === 4) {
+            setUniversidadId(2); // Javeriana
+            console.log('🔄 Fallback: Universidad ID establecido a 2 (Javeriana)');
+          }
+        }
+      }
+
+    } catch (error) {
+      console.error('❌ Error cargando datos del plato:', error);
     }
   };
 
@@ -82,11 +130,34 @@ const plato = () => {
       return;
     }
 
+    // ✅ Verificar que tengamos universidadId antes de continuar
+    if (!universidadId || universidadId === 0) {
+      console.error('❌ Error: universidadId no está definido');
+      Alert.alert(
+        'Error',
+        'No se pudo determinar la universidad. Por favor, intenta nuevamente.',
+        [{ text: 'OK', onPress: () => router.back() }]
+      );
+      return;
+    }
+
+    console.log('🛒 Agregando al carrito con datos:', {
+      platoNombre: platoActual?.nombre,
+      restauranteId: idRestaurante,
+      restauranteNombre,
+      universidadActual,
+      universidadId, // ✅ Debería ser 2 para La Esquina
+    });
+
     const platoCarrito = platoHook.crearPlatoParaCarrito();
 
     if (!platoCarrito || !platoHook.puedeAgregarAlCarrito) {
+      console.error('❌ No se pudo crear el plato para carrito');
       return;
     }
+
+    // ✅ Verificar una vez más los datos antes de agregar
+    console.log('🔍 Verificación final antes de agregar al carrito:', platoCarrito);
 
     const idUnico = agregarAlCarrito(platoCarrito);
 
@@ -113,6 +184,18 @@ const plato = () => {
   const formatearPrecio = (precio: number) => {
     return `$${precio.toLocaleString('es-CO')}`;
   };
+
+  // ✅ Mostrar información de debugging en desarrollo
+  if (__DEV__ && platoActual) {
+    console.log('🔧 DEV - Estado actual del componente plato:', {
+      platoNombre: platoActual.nombre,
+      idRestaurante,
+      restauranteNombre,
+      universidadActual,
+      universidadId,
+      platoDisponible: platoActual.disponible
+    });
+  }
 
   if (!platoActual || !platoHook.platoDisponible) {
     return (
@@ -323,6 +406,21 @@ const plato = () => {
               </Text>
             </View>
           </View>
+
+          {/* ✅ Debug info en desarrollo */}
+          {__DEV__ && (
+            <View className="mb-6 p-4 bg-gray-50 rounded-xl">
+              <Text className="text-gray-800 font-JakartaBold text-sm mb-2">
+                🔧 DEV - Info del plato:
+              </Text>
+              <Text className="text-gray-600 font-JakartaMedium text-xs">
+                Restaurante ID: {idRestaurante} | Universidad ID: {universidadId}
+              </Text>
+              <Text className="text-gray-600 font-JakartaMedium text-xs">
+                Universidad: {universidadActual}
+              </Text>
+            </View>
+          )}
 
           {/* Espaciado inferior para el footer fijo */}
           <View className="h-32" />

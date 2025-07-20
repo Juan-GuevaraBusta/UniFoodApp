@@ -61,30 +61,67 @@ const schema = a.schema({
       allow.authenticated().to(['read']),
     ]),
 
+  // ✅ MODELO COMPLETO de pedidos para la vida real
   Pedido: a
     .model({
+      // Información básica del pedido
+      numeroOrden: a.string().required(), // Código corto como #A1B2C-D3E
       usuarioEmail: a.string().required(),
       restauranteId: a.id().required(),
       restaurante: a.belongsTo('Restaurante', 'restauranteId'),
+
+      // Información financiera
+      subtotal: a.integer().required(),
+      tarifaServicio: a.integer().required(),
       total: a.integer().required(),
-      estado: a.enum(['pendiente', 'preparando', 'listo', 'entregado', 'cancelado']),
-      comentarios: a.string(),
-      fechaPedido: a.datetime(),
-      numeroOrden: a.string(),
-      // Información del pedido en JSON para simplicidad
-      itemsPedido: a.json(), // Array de items con toda la info
+
+      // Estado y fechas
+      estado: a.enum(['pendiente', 'aceptado', 'preparando', 'listo', 'entregado', 'cancelado']),
+      fechaPedido: a.datetime().required(),
+      fechaAceptado: a.datetime(),
+      fechaListo: a.datetime(),
+      fechaEntregado: a.datetime(),
+
+      // Información adicional
+      comentariosCliente: a.string(),
+      comentariosRestaurante: a.string(),
+      tiempoEstimado: a.integer(), // minutos
+
+      // Información del cliente (para mostrar en el restaurante)
+      clienteNombre: a.string(),
+      clienteTelefono: a.string(),
+
+      // Items del pedido en JSON para simplicidad
+      itemsPedido: a.json().required(), // Array de items con toda la info
+
+      // Información de la universidad para filtros
+      universidadId: a.integer().required(),
+
+      // Índices para consultas eficientes
+      restauranteEstado: a.string().required(), // "restauranteId#estado" para filtrar
     })
     .authorization((allow) => [
-      allow.authenticated().to(['read', 'create', 'update']),
+      // Cualquier usuario autenticado puede crear y leer pedidos
+      allow.authenticated().to(['create', 'read', 'update']),
+      // Los invitados pueden leer (por si es necesario)
+      allow.guest().to(['read']),
+    ])
+    // Índices para consultas eficientes
+    .secondaryIndexes((index) => [
+      index('restauranteEstado'), // Para obtener pedidos por restaurante y estado
+      index('usuarioEmail'), // Para obtener pedidos por usuario
+      index('restauranteId'), // Para obtener todos los pedidos de un restaurante
     ]),
 });
 
+// ✅ CRÍTICO: Exportar el tipo Schema
 export type Schema = ClientSchema<typeof schema>;
 
+// ✅ CRÍTICO: Exportar la configuración de data
 export const data = defineData({
   schema,
   authorizationModes: {
-    defaultAuthorizationMode: 'apiKey',
+    defaultAuthorizationMode: 'userPool', // Mantener userPool para autenticación real
     apiKeyAuthorizationMode: {
       expiresInDays: 30,
     },
