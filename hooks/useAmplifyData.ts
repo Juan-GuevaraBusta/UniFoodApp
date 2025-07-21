@@ -200,14 +200,6 @@ export const useAmplifyData = () => {
                 variables: { input }
             });
 
-            if (result.errors) {
-                console.error('❌ Errores GraphQL:', result.errors);
-                return {
-                    success: false,
-                    error: `Error GraphQL: ${result.errors.map((e: any) => e.message).join(', ')}`
-                };
-            }
-
             const pedido = result.data?.createPedido;
             if (!pedido) {
                 return {
@@ -278,14 +270,6 @@ export const useAmplifyData = () => {
                 variables: { filter }
             });
 
-            if (result.errors) {
-                console.error('❌ Errores GraphQL:', result.errors);
-                return {
-                    success: false,
-                    error: `Error GraphQL: ${result.errors.map((e: any) => e.message).join(', ')}`
-                };
-            }
-
             const pedidos = result.data?.listPedidos?.items || [];
 
             // Parsear itemsPedido de JSON string a objeto
@@ -352,13 +336,6 @@ export const useAmplifyData = () => {
                 variables: { id: pedidoId }
             });
 
-            if (getResult.errors || !getResult.data?.getPedido) {
-                return {
-                    success: false,
-                    error: 'Pedido no encontrado'
-                };
-            }
-
             const pedidoActual = getResult.data.getPedido;
 
             const input: any = {
@@ -389,14 +366,6 @@ export const useAmplifyData = () => {
                 query: UPDATE_PEDIDO,
                 variables: { input }
             });
-
-            if (updateResult.errors) {
-                console.error('❌ Error actualizando:', updateResult.errors);
-                return {
-                    success: false,
-                    error: `Error GraphQL: ${updateResult.errors.map((e: any) => e.message).join(', ')}`
-                };
-            }
 
             if ('data' in updateResult && updateResult.data) {
                 console.log('✅ Pedido actualizado:', updateResult.data.updatePedido);
