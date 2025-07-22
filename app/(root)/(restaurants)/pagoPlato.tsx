@@ -1,13 +1,19 @@
 /* eslint-disable prettier/prettier */
-// app/(root)/(restaurants)/pagoPlato.tsx - Nueva pantalla de pago
+// app/(root)/(restaurants)/pagoPlato.tsx - VERSIÓN PRODUCCIÓN CON GRAPHQL REAL
 import { Text, TouchableOpacity, View, ScrollView, Image, Alert, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from 'expo-router';
 import { useCarrito } from '@/context/contextCarrito';
-import { useAmplifyData } from "@/hooks/useAmplifyData";
+import { useAuth } from "@/hooks/useAuth";
+import { generateClient } from 'aws-amplify/data';
+import type { Schema } from '@/amplify/data/resource';
+import { getCurrentUser, fetchAuthSession } from 'aws-amplify/auth';
 import { useState } from 'react';
 import { Stack } from "expo-router";
-import { ArrowLeft, CreditCard, CheckCircle, Clock, MapPin } from "lucide-react-native";
+import { ArrowLeft, CreditCard, CheckCircle, Clock, MapPin, User } from "lucide-react-native";
+
+// ✅ Cliente GraphQL tipado para producción
+const client = generateClient<Schema>();
 
 const PagoPlato = () => {
     const [isProcessing, setIsProcessing] = useState(false);
@@ -20,7 +26,7 @@ const PagoPlato = () => {
         limpiarCarrito
     } = useCarrito();
 
-    const { crearPedido } = useAmplifyData();
+    const { user } = useAuth();
 
     // Función para formatear precio
     const formatearPrecio = (precio: number) => {
@@ -29,8 +35,166 @@ const PagoPlato = () => {
 
     // Calcular totales
     const subtotal = calcularTotalCarrito();
-    const tarifaServicio = Math.round(subtotal * 0.05); // 5% de tarifa de servicio
+    const tarifaServicio = Math.round(subtotal * 0.05);
     const total = subtotal + tarifaServicio;
+
+    // ✅ FUNCIÓN PRINCIPAL: Crear pedido real en GraphQL/AppSync
+    const crearPedidoProduccion = async (): Promise<{ success: boolean, numeroOrden?: string, pedidoId?: string, error?: string, needsReauth?: boolean }> => {
+        try {
+            console.log('🚀 PRODUCCIÓN - Iniciando creación de pedido real...');
+
+            // ✅ PASO 1: Verificar usuario actual y sesión
+            let currentUser;
+            let session;
+
+            try {
+                [currentUser, session] = await Promise.all([
+                    getCurrentUser(),
+                    fetchAuthSession()
+                ]);
+
+                console.log('✅ PRODUCCIÓN - Usuario verificado:', {
+                    username: currentUser.username,
+                    hasTokens: !!session.tokens,
+                    hasAccessToken: !!session.tokens?.accessToken
+                });
+
+                if (!session.tokens?.accessToken) {
+                    throw new Error('No access token available');
+                }
+
+            } catch (authError) {
+                console.error('❌ PRODUCCIÓN - Error de autenticación:', authError);
+                return {
+                    success: false,
+                    error: 'Sesión expirada. Por favor inicia sesión nuevamente.',
+                    needsReauth: true
+                };
+            }
+
+            // ✅ PASO 2: Preparar datos del pedido
+            const primerItem = carrito[0];
+            const restauranteId = primerItem.idRestaurante.toString();
+            const universidadId = primerItem.universidadId;
+            const numeroOrden = generateShortOrderNumber();
+            const usuarioEmail = currentUser.signInDetails?.loginId || user?.email;
+
+            if (!usuarioEmail) {
+                throw new Error('No se pudo obtener el email del usuario');
+            }
+
+            const pedidoData = {
+                numeroOrden,
+                usuarioEmail,
+                restauranteId,
+                subtotal,
+                tarifaServicio,
+                total,
+                estado: 'pendiente' as const,
+                fechaPedido: new Date().toISOString(),
+                comentariosCliente: carrito
+                    .filter(item => item.comentarios?.trim())
+                    .map(item => `${item.plato.nombre}: ${item.comentarios}`)
+                    .join('; ') || undefined,
+                universidadId,
+                restauranteEstado: `${restauranteId}#pendiente`,
+                itemsPedido: carrito.map(item => ({
+                    platoId: item.plato.idPlato,
+                    platoNombre: item.plato.nombre,
+                    platoDescripcion: item.plato.descripcion,
+                    precioUnitario: item.plato.precio,
+                    cantidad: item.cantidad,
+                    comentarios: item.comentarios || undefined,
+                    toppingsSeleccionados: item.toppingsSeleccionados || [],
+                    toppingsBaseRemocionados: item.toppingsBaseRemocionados || [],
+                    precioTotal: item.precioTotal,
+                    totalItem: item.precioTotal * item.cantidad,
+                    idUnico: item.idUnico,
+                    restauranteNombre: item.nombreRestaurante,
+                    universidadNombre: item.nombreUniversidad
+                }))
+            };
+
+            console.log('📋 PRODUCCIÓN - Datos del pedido preparados:', {
+                numeroOrden,
+                usuarioEmail,
+                restauranteId,
+                total,
+                itemsCount: pedidoData.itemsPedido.length
+            });
+
+            // ✅ PASO 3: Crear pedido en AppSync usando client tipado
+            console.log('🔗 PRODUCCIÓN - Enviando a AppSync...');
+
+            const { data: pedido, errors } = await client.models.Pedido.create(pedidoData);
+
+            if (errors && errors.length > 0) {
+                console.error('❌ PRODUCCIÓN - Errores de GraphQL:', errors);
+
+                // Detectar errores de autenticación específicos
+                const authError = errors.find(err =>
+                    err.message?.includes('Unauthorized') ||
+                    err.message?.includes('Not Authorized') ||
+                    err.message?.includes('authentication') ||
+                    err.message?.includes('UnauthorizedException')
+                );
+
+                if (authError) {
+                    return {
+                        success: false,
+                        error: 'Tu sesión ha expirado. Por favor inicia sesión nuevamente.',
+                        needsReauth: true
+                    };
+                }
+
+                return {
+                    success: false,
+                    error: errors[0].message || 'Error del servidor al crear el pedido'
+                };
+            }
+
+            if (!pedido) {
+                return {
+                    success: false,
+                    error: 'No se recibió respuesta del servidor'
+                };
+            }
+
+            console.log('✅ PRODUCCIÓN - Pedido creado exitosamente en AppSync:', {
+                id: pedido.id,
+                numeroOrden: pedido.numeroOrden,
+                estado: pedido.estado
+            });
+
+            return {
+                success: true,
+                numeroOrden: pedido.numeroOrden,
+                pedidoId: pedido.id
+            };
+
+        } catch (error: any) {
+            console.error('❌ PRODUCCIÓN - Error inesperado:', error);
+
+            // Detectar errores de autenticación en el catch
+            if (error.message?.includes('autenticación') ||
+                error.message?.includes('authentication') ||
+                error.message?.includes('Unauthorized') ||
+                error.message?.includes('No access token') ||
+                error.name?.includes('NotAuthorizedException') ||
+                error.name?.includes('UnauthorizedException')) {
+                return {
+                    success: false,
+                    error: 'Tu sesión ha expirado. Por favor inicia sesión nuevamente.',
+                    needsReauth: true
+                };
+            }
+
+            return {
+                success: false,
+                error: error.message || 'Error interno del servidor'
+            };
+        }
+    };
 
     // Verificar que hay items en el carrito
     if (carrito.length === 0) {
@@ -59,7 +223,7 @@ const PagoPlato = () => {
 
     const restauranteInfo = carrito[0];
 
-    // Función para procesar el pago
+    // ✅ Función para procesar el pago en producción
     const procesarPago = async () => {
         Alert.alert(
             'Confirmar pedido',
@@ -81,14 +245,24 @@ const PagoPlato = () => {
         setIsProcessing(true);
 
         try {
-            console.log('💳 Procesando pago para pedido:', carrito);
+            console.log('💳 PRODUCCIÓN - Iniciando proceso de pedido real...');
 
-            const resultado = await crearPedido(carrito, total);
+            console.log('💳 PRODUCCIÓN - Datos del pedido:', {
+                usuario: user?.email,
+                total,
+                itemsCount: carrito.length,
+                restaurante: restauranteInfo.nombreRestaurante
+            });
+
+            // ✅ Crear pedido real en AppSync
+            const resultado = await crearPedidoProduccion();
 
             if (resultado.success) {
+                console.log('✅ PRODUCCIÓN - Pedido creado exitosamente:', resultado);
+
                 Alert.alert(
                     '🎉 ¡Pedido realizado exitosamente!',
-                    `Tu pedido #${resultado.numeroOrden} ha sido enviado a ${restauranteInfo.nombreRestaurante}. Te notificaremos cuando esté listo para recoger.`,
+                    `Tu pedido ${resultado.numeroOrden} ha sido enviado a ${restauranteInfo.nombreRestaurante}. \n\nEl restaurante recibirá la notificación y comenzará a preparar tu orden.`,
                     [
                         {
                             text: 'Ver mis pedidos',
@@ -107,17 +281,57 @@ const PagoPlato = () => {
                     ]
                 );
             } else {
-                console.error('❌ Error en el pedido:', resultado.error);
-                Alert.alert(
-                    'Error al procesar pedido',
-                    resultado.error || 'Ha ocurrido un error inesperado. Intenta nuevamente.'
-                );
+                console.error('❌ PRODUCCIÓN - Error en el pedido:', resultado.error);
+
+                // ✅ MANEJO ESPECÍFICO: Error de autenticación
+                if (resultado.needsReauth) {
+                    Alert.alert(
+                        'Sesión Expirada',
+                        'Tu sesión ha expirado. Inicia sesión nuevamente para continuar.',
+                        [
+                            {
+                                text: 'Iniciar Sesión',
+                                onPress: () => router.replace('/(auth)/iniciaSesion')
+                            },
+                            {
+                                text: 'Cancelar',
+                                style: 'cancel'
+                            }
+                        ]
+                    );
+                } else {
+                    Alert.alert(
+                        'Error al procesar pedido',
+                        resultado.error || 'Ha ocurrido un error inesperado. Intenta nuevamente.',
+                        [
+                            {
+                                text: 'Reintentar',
+                                onPress: () => confirmarPedido()
+                            },
+                            {
+                                text: 'Cancelar',
+                                style: 'cancel'
+                            }
+                        ]
+                    );
+                }
             }
-        } catch (error) {
-            console.error('❌ Error inesperado:', error);
+        } catch (error: any) {
+            console.error('❌ PRODUCCIÓN - Error inesperado:', error);
+
             Alert.alert(
-                'Error',
-                'Ha ocurrido un error inesperado. Verifica tu conexión e intenta nuevamente.'
+                'Error de Conexión',
+                'No se pudo conectar con el servidor. Verifica tu conexión a internet e intenta nuevamente.',
+                [
+                    {
+                        text: 'Reintentar',
+                        onPress: () => confirmarPedido()
+                    },
+                    {
+                        text: 'Cancelar',
+                        style: 'cancel'
+                    }
+                ]
             );
         } finally {
             setIsProcessing(false);
@@ -143,6 +357,16 @@ const PagoPlato = () => {
                         </Text>
                     </View>
                     <View className="w-10" />
+                </View>
+
+                {/* ✅ Información del usuario autenticado */}
+                <View className="px-5 py-3 bg-green-50 border-b border-green-200">
+                    <View className="flex-row items-center">
+                        <User size={16} color="#059669" />
+                        <Text className="text-green-800 font-JakartaBold text-sm ml-2">
+                            Pedido para: {user?.email}
+                        </Text>
+                    </View>
                 </View>
 
                 <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
@@ -248,12 +472,12 @@ const PagoPlato = () => {
                             </View>
                         </View>
 
-                        <View className="mt-4 p-3 bg-blue-50 rounded-xl">
-                            <Text className="text-blue-800 font-JakartaBold text-sm mb-1">
-                                💡 Información de pago
+                        <View className="mt-4 p-3 bg-green-50 rounded-xl">
+                            <Text className="text-green-800 font-JakartaBold text-sm mb-1">
+                                🚀 Sistema Real
                             </Text>
-                            <Text className="text-blue-700 font-JakartaMedium text-xs">
-                                El pago se realiza directamente en el restaurante cuando recojas tu pedido. Puedes pagar en efectivo o con tarjeta.
+                            <Text className="text-green-700 font-JakartaMedium text-xs">
+                                Este pedido se enviará en tiempo real al restaurante a través de AWS AppSync y DynamoDB.
                             </Text>
                         </View>
                     </View>
@@ -314,7 +538,7 @@ const PagoPlato = () => {
                             <>
                                 <ActivityIndicator size="small" color="white" />
                                 <Text className="text-white font-JakartaBold text-lg ml-3">
-                                    Procesando pedido...
+                                    Enviando a restaurante...
                                 </Text>
                             </>
                         ) : (
@@ -326,10 +550,38 @@ const PagoPlato = () => {
                             </>
                         )}
                     </TouchableOpacity>
+
+                    {/* ✅ Info de producción */}
+                    {__DEV__ && (
+                        <View className="mt-4 p-3 bg-green-50 rounded-xl">
+                            <Text className="text-green-800 font-JakartaBold text-sm mb-1">
+                                🚀 PRODUCCIÓN - AppSync + DynamoDB
+                            </Text>
+                            <Text className="text-green-700 font-JakartaMedium text-xs">
+                                Usuario: {user?.email} | GraphQL Client: Activo
+                            </Text>
+                        </View>
+                    )}
                 </View>
             </SafeAreaView>
         </>
     );
 };
+
+// ✅ Función para generar número de orden
+function generateShortOrderNumber(): string {
+    const timestamp = Date.now();
+    const shortTimestamp = timestamp % 1000000;
+    const random = Math.floor(Math.random() * 1000);
+
+    const timestampHex = shortTimestamp.toString(16).toUpperCase().padStart(5, '0');
+    const randomHex = random.toString(16).toUpperCase().padStart(3, '0');
+
+    const part1 = timestampHex.substring(0, 3);
+    const part2 = timestampHex.substring(3, 5);
+    const part3 = randomHex;
+
+    return `#${part1}${part2}-${part3}`;
+}
 
 export default PagoPlato;

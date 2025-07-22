@@ -1,6 +1,6 @@
-// hooks/useAuth.ts - Con información específica de restaurante
-import { useState } from 'react';
-import { signUp, signIn, confirmSignUp, signOut, getCurrentUser } from 'aws-amplify/auth';
+// hooks/useAuth.ts - Con verificación mejorada para Gen 2
+import { useState, useEffect } from 'react';
+import { signUp, signIn, confirmSignUp, signOut, getCurrentUser, fetchAuthSession } from 'aws-amplify/auth';
 import { getUserRoleByEmail, getRestaurantInfoByEmail, type RestaurantInfo } from '@/constants/userRoles';
 
 export interface AuthUser {
@@ -8,12 +8,33 @@ export interface AuthUser {
     email: string;
     isAuthenticated: boolean;
     role?: string;
-    restaurantInfo?: RestaurantInfo | null; // Nueva propiedad para info del restaurante
+    restaurantInfo?: RestaurantInfo | null;
 }
 
 export const useAuth = () => {
     const [isLoading, setIsLoading] = useState(false);
     const [user, setUser] = useState<AuthUser | null>(null);
+
+    // ✅ Verificar sesión al inicializar el hook
+    useEffect(() => {
+        verificarSesionInicial();
+    }, []);
+
+    // ✅ Verificación inicial silenciosa
+    const verificarSesionInicial = async () => {
+        try {
+            const currentUser = await getCurrentUser();
+            if (currentUser) {
+                const email = currentUser.signInDetails?.loginId || '';
+                const authUser = createAuthUser(currentUser, email);
+                setUser(authUser);
+                console.log('✅ Sesión existente detectada:', email);
+            }
+        } catch (error) {
+            // Silencioso - no hay sesión activa
+            console.log('ℹ️ No hay sesión activa');
+        }
+    };
 
     // Función auxiliar para crear usuario autenticado con toda la info
     const createAuthUser = (currentUser: any, email: string): AuthUser => {
@@ -27,6 +48,84 @@ export const useAuth = () => {
             role,
             restaurantInfo,
         };
+    };
+
+    // ✅ VERIFICAR SESIÓN ACTUAL - Con verificación de tokens
+    const verificarSesion = async () => {
+        try {
+            console.log('🔍 VERIFICAR SESION - Iniciando verificación completa...');
+
+            // ✅ Paso 1: Verificar usuario actual
+            const currentUser = await getCurrentUser();
+            console.log('🔍 VERIFICAR SESION - Current user:', currentUser?.username);
+
+            if (!currentUser) {
+                console.log('❌ VERIFICAR SESION - No hay usuario actual');
+                setUser(null);
+                return null;
+            }
+
+            // ✅ Paso 2: Verificar sesión y tokens
+            const session = await fetchAuthSession();
+            console.log('🔍 VERIFICAR SESION - Sesión obtenida:', {
+                tokens: !!session.tokens,
+                accessToken: !!session.tokens?.accessToken,
+                idToken: !!session.tokens?.idToken,
+                isValid: !!session.tokens?.accessToken?.toString()
+            });
+
+            if (!session.tokens?.accessToken) {
+                console.log('❌ VERIFICAR SESION - No hay tokens válidos');
+                setUser(null);
+                return null;
+            }
+
+            // ✅ Paso 3: Crear usuario autenticado
+            const email = currentUser.signInDetails?.loginId || '';
+            console.log('🔍 VERIFICAR SESION - Email:', email);
+
+            const authUser = createAuthUser(currentUser, email);
+            console.log('🔍 VERIFICAR SESION - AuthUser creado:', authUser);
+
+            setUser(authUser);
+            return authUser;
+
+        } catch (error: any) {
+            console.error('❌ VERIFICAR SESION - Error:', error);
+
+            // ✅ Si hay error de autenticación, limpiar estado
+            if (error.name === 'NotAuthorizedException' ||
+                error.name === 'UserNotConfirmedException' ||
+                error.message?.includes('No current user')) {
+                setUser(null);
+            }
+
+            return null;
+        }
+    };
+
+    // ✅ FUNCIÓN AUXILIAR: Verificar si la sesión sigue siendo válida
+    const validarSesionActiva = async (): Promise<boolean> => {
+        try {
+            const session = await fetchAuthSession();
+
+            if (!session.tokens?.accessToken) {
+                return false;
+            }
+
+            // ✅ Verificar que el token no esté expirado
+            const tokenString = session.tokens.accessToken.toString();
+            if (!tokenString || tokenString.length === 0) {
+                return false;
+            }
+
+            console.log('✅ Sesión validada correctamente');
+            return true;
+
+        } catch (error) {
+            console.error('❌ Error validando sesión:', error);
+            return false;
+        }
     };
 
     // REGISTRO - Sin cambios significativos
@@ -148,7 +247,7 @@ export const useAuth = () => {
         }
     };
 
-    // LOGIN - Con información específica de restaurante
+    // LOGIN - Con verificación mejorada de sesión
     const iniciarSesion = async (email: string, password: string, retryCount = 0) => {
         try {
             setIsLoading(true);
@@ -156,41 +255,48 @@ export const useAuth = () => {
 
             const username = email.toLowerCase().trim();
 
-            // PRIMER INTENTO: Verificar usuario actual
+            // ✅ PRIMER INTENTO: Verificar usuario actual con validación de sesión
             try {
                 const currentUser = await getCurrentUser();
                 if (currentUser) {
-                    // Si es el mismo usuario, devolver éxito inmediatamente
+                    // Si es el mismo usuario, verificar que la sesión sea válida
                     if (currentUser.signInDetails?.loginId === username) {
-                        console.log('✅ Usuario ya autenticado - acceso directo');
+                        const sesionValida = await validarSesionActiva();
 
-                        const authUser = createAuthUser(currentUser, username);
-                        setUser(authUser);
+                        if (sesionValida) {
+                            console.log('✅ Usuario ya autenticado con sesión válida - acceso directo');
 
-                        // Log específico para restaurantes
-                        if (authUser.restaurantInfo) {
-                            console.log('🍕 Restaurante ya autenticado:', {
-                                nombre: authUser.restaurantInfo.nombreRestaurante,
-                                universidad: authUser.restaurantInfo.nombreUniversidad,
-                                universidadId: authUser.restaurantInfo.universidadId,
-                                restauranteId: authUser.restaurantInfo.restauranteId
-                            });
+                            const authUser = createAuthUser(currentUser, username);
+                            setUser(authUser);
+
+                            // Log específico para restaurantes
+                            if (authUser.restaurantInfo) {
+                                console.log('🍕 Restaurante ya autenticado:', {
+                                    nombre: authUser.restaurantInfo.nombreRestaurante,
+                                    universidad: authUser.restaurantInfo.nombreUniversidad,
+                                    universidadId: authUser.restaurantInfo.universidadId,
+                                    restauranteId: authUser.restaurantInfo.restauranteId
+                                });
+                            }
+
+                            return {
+                                success: true,
+                                message: 'Ya estás logueado con esta cuenta',
+                                user: authUser,
+                                role: authUser.role,
+                                restaurantInfo: authUser.restaurantInfo,
+                            };
+                        } else {
+                            console.log('⚠️ Sesión inválida, procediendo con nuevo login');
+                            await forzarCerrarSesion();
                         }
-
-                        return {
-                            success: true,
-                            message: 'Ya estás logueado con esta cuenta',
-                            user: authUser,
-                            role: authUser.role,
-                            restaurantInfo: authUser.restaurantInfo,
-                        };
                     }
                 }
             } catch (getUserError) {
                 // Silencioso - no hay usuario previo
             }
 
-            // SEGUNDO INTENTO: Intentar login normal
+            // ✅ SEGUNDO INTENTO: Intentar login normal
             const { isSignedIn, nextStep } = await signIn({
                 username,
                 password,
@@ -202,9 +308,15 @@ export const useAuth = () => {
             console.log('✅ Login exitoso');
 
             if (isSignedIn) {
+                // ✅ Verificar que el login resultó en una sesión válida
                 const currentUser = await getCurrentUser();
-                const authUser = createAuthUser(currentUser, username);
+                const session = await fetchAuthSession();
 
+                if (!session.tokens?.accessToken) {
+                    throw new Error('No se obtuvieron tokens válidos después del login');
+                }
+
+                const authUser = createAuthUser(currentUser, username);
                 setUser(authUser);
 
                 // Log específico para restaurantes
@@ -329,32 +441,6 @@ export const useAuth = () => {
         }
     };
 
-    // VERIFICAR SESIÓN ACTUAL - Con información específica
-    const verificarSesion = async () => {
-        try {
-            console.log('🔍 VERIFICAR SESION - Iniciando...');
-            const currentUser = await getCurrentUser();
-            console.log('🔍 VERIFICAR SESION - Current user:', currentUser);
-
-            if (currentUser) {
-                const email = currentUser.signInDetails?.loginId || '';
-                console.log('🔍 VERIFICAR SESION - Email:', email);
-
-                const authUser = createAuthUser(currentUser, email);
-                console.log('🔍 VERIFICAR SESION - AuthUser creado:', authUser);
-
-                setUser(authUser);
-                return authUser;
-            }
-
-            return null;
-        } catch (error) {
-            console.error('❌ VERIFICAR SESION - Error:', error);
-            setUser(null);
-            return null;
-        }
-    };
-
     return {
         // Estados
         isLoading,
@@ -367,5 +453,6 @@ export const useAuth = () => {
         iniciarSesion,
         cerrarSesion,
         verificarSesion,
+        validarSesionActiva, // ✅ Nueva función para validación
     };
 };

@@ -2,14 +2,18 @@ import { Text, View, TouchableOpacity, ScrollView, RefreshControl, Alert } from 
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { useAuth } from "@/hooks/useAuth";
-import { useAmplifyData } from "@/hooks/useAmplifyData";
+import { generateClient } from 'aws-amplify/data';
+import type { Schema } from '@/amplify/data/resource';
+import { getCurrentUser, fetchAuthSession } from 'aws-amplify/auth';
 import { useState, useCallback, useEffect } from "react";
 import { useFocusEffect } from '@react-navigation/native';
-import { ClipboardList, Clock, CheckCircle, Home, Bell, Filter, RefreshCw } from "lucide-react-native";
+import { ClipboardList, Clock, CheckCircle, Home, RefreshCw } from "lucide-react-native";
+
+// ✅ Cliente GraphQL tipado para producción
+const client = generateClient<Schema>();
 
 const PedidosRestaurante = () => {
     const { user } = useAuth();
-    const { obtenerPedidosRestaurante, actualizarEstadoPedido } = useAmplifyData();
 
     const [pedidos, setPedidos] = useState<any[]>([]);
     const [refreshing, setRefreshing] = useState(false);
@@ -19,50 +23,148 @@ const PedidosRestaurante = () => {
     // ✅ Cargar pedidos al enfocar la pantalla
     useFocusEffect(
         useCallback(() => {
-            console.log('📱 Pantalla pedidos enfocada, cargando pedidos...');
+            console.log('📱 RESTAURANTE - Pantalla pedidos enfocada, cargando pedidos...');
             cargarPedidos();
         }, [])
     );
 
-    // ✅ FUNCIÓN REAL para cargar pedidos
+    // ✅ FUNCIÓN PRINCIPAL: Cargar pedidos reales desde AppSync
     const cargarPedidos = async () => {
         try {
             if (!user?.restaurantInfo) {
-                console.log('❌ No hay información de restaurante');
+                console.log('❌ RESTAURANTE - No hay información de restaurante');
+                setLoading(false);
                 return;
             }
 
-            console.log('📋 Cargando pedidos reales del restaurante:', user.restaurantInfo.restauranteId);
+            console.log('📋 RESTAURANTE - Cargando pedidos para:', user.restaurantInfo.restauranteId);
 
-            const estadoFiltro = filtroEstado === 'todos' ? undefined : filtroEstado;
-            const resultado = await obtenerPedidosRestaurante(user.restaurantInfo.restauranteId, estadoFiltro);
+            // ✅ PASO 1: Verificar autenticación del restaurante
+            let currentUser;
+            let session;
 
-            if (resultado.success) {
-                console.log('✅ Pedidos cargados:', resultado.pedidos?.length || 0);
-                setPedidos(resultado.pedidos || []);
+            try {
+                [currentUser, session] = await Promise.all([
+                    getCurrentUser(),
+                    fetchAuthSession()
+                ]);
+
+                if (!session.tokens?.accessToken) {
+                    throw new Error('No access token available');
+                }
+
+                console.log('✅ RESTAURANTE - Autenticación verificada');
+            } catch (authError) {
+                console.error('❌ RESTAURANTE - Error de autenticación:', authError);
+                Alert.alert(
+                    'Sesión expirada',
+                    'Tu sesión ha expirado. Por favor inicia sesión nuevamente.',
+                    [
+                        {
+                            text: 'Iniciar sesión',
+                            onPress: () => router.replace('/(auth)/iniciaSesion')
+                        }
+                    ]
+                );
+                setLoading(false);
+                return;
+            }
+
+            // ✅ PASO 2: Preparar filtros para la consulta GraphQL
+            const restauranteId = user.restaurantInfo.restauranteId.toString();
+            let filter: any;
+
+            if (filtroEstado === 'todos') {
+                // Obtener todos los pedidos del restaurante
+                filter = {
+                    restauranteId: { eq: restauranteId }
+                };
             } else {
-                console.error('❌ Error cargando pedidos:', resultado.error);
+                // Filtrar por estado específico usando restauranteEstado
+                filter = {
+                    restauranteEstado: { eq: `${restauranteId}#${filtroEstado}` }
+                };
+            }
 
-                // ✅ Manejar errores de autenticación específicamente
-                if (resultado.needsReauth) {
+            console.log('🔍 RESTAURANTE - Filtro aplicado:', {
+                restauranteId,
+                filtroEstado,
+                filter
+            });
+
+            // ✅ PASO 3: Consultar pedidos en AppSync/DynamoDB
+            console.log('🔗 RESTAURANTE - Consultando AppSync...');
+
+            const { data: pedidosData, errors } = await client.models.Pedido.list({
+                filter,
+                // Ordenar por fecha más reciente primero
+                limit: 50
+            });
+
+            if (errors && errors.length > 0) {
+                console.error('❌ RESTAURANTE - Errores GraphQL:', errors);
+
+                const authError = errors.find(err =>
+                    err.message?.includes('Unauthorized') ||
+                    err.message?.includes('Not Authorized')
+                );
+
+                if (authError) {
                     Alert.alert(
                         'Sesión expirada',
                         'Tu sesión ha expirado. Por favor inicia sesión nuevamente.',
                         [
                             {
                                 text: 'Iniciar sesión',
-                                onPress: () => {
-                                    router.replace('/(auth)/iniciaSesion');
-                                }
+                                onPress: () => router.replace('/(auth)/iniciaSesion')
                             }
                         ]
                     );
                 } else {
-                    Alert.alert('Error', resultado.error || 'No se pudieron cargar los pedidos');
+                    Alert.alert('Error', errors[0].message || 'No se pudieron cargar los pedidos');
                 }
+
+                setLoading(false);
+                return;
             }
-        } catch (error) {
-            console.error('❌ Error inesperado:', error);
+
+            if (!pedidosData) {
+                console.log('⚠️ RESTAURANTE - No se recibieron datos');
+                setPedidos([]);
+                setLoading(false);
+                return;
+            }
+
+            // ✅ PASO 4: Procesar y ordenar pedidos
+            console.log('📊 RESTAURANTE - Procesando pedidos recibidos:', pedidosData.length);
+
+            // Procesar itemsPedido (viene como JSON string)
+            const pedidosProcesados = pedidosData.map((pedido: any) => ({
+                ...pedido,
+                itemsPedido: typeof pedido.itemsPedido === 'string'
+                    ? JSON.parse(pedido.itemsPedido)
+                    : pedido.itemsPedido || []
+            }));
+
+            // Ordenar por fecha más reciente
+            const pedidosOrdenados = pedidosProcesados.sort((a: any, b: any) =>
+                new Date(b.fechaPedido).getTime() - new Date(a.fechaPedido).getTime()
+            );
+
+            console.log('✅ RESTAURANTE - Pedidos cargados exitosamente:', {
+                total: pedidosOrdenados.length,
+                estados: pedidosOrdenados.reduce((acc: any, p: any) => {
+                    acc[p.estado] = (acc[p.estado] || 0) + 1;
+                    return acc;
+                }, {}),
+                filtroActual: filtroEstado
+            });
+
+            setPedidos(pedidosOrdenados);
+
+        } catch (error: any) {
+            console.error('❌ RESTAURANTE - Error inesperado:', error);
+            Alert.alert('Error', 'Ocurrió un error inesperado al cargar los pedidos');
         } finally {
             setLoading(false);
         }
@@ -71,57 +173,129 @@ const PedidosRestaurante = () => {
     // ✅ Recargar cuando cambie el filtro
     useEffect(() => {
         if (!loading) {
+            console.log('🔄 RESTAURANTE - Filtro cambió a:', filtroEstado);
             cargarPedidos();
         }
     }, [filtroEstado]);
 
     // ✅ Pull to refresh
     const onRefresh = useCallback(async () => {
+        console.log('🔄 RESTAURANTE - Refrescando pedidos...');
         setRefreshing(true);
         await cargarPedidos();
         setRefreshing(false);
     }, [filtroEstado]);
 
-    // ✅ FUNCIÓN REAL para cambiar estado de pedido
+    // ✅ FUNCIÓN PRINCIPAL: Actualizar estado del pedido
     const cambiarEstadoPedido = async (pedidoId: string, nuevoEstado: string, numeroOrden: string) => {
         try {
-            console.log('🔄 Cambiando estado del pedido:', { pedidoId, nuevoEstado, numeroOrden });
+            console.log('🔄 RESTAURANTE - Cambiando estado:', { pedidoId, nuevoEstado, numeroOrden });
 
-            const resultado = await actualizarEstadoPedido(pedidoId, nuevoEstado);
-
-            if (resultado.success) {
-                console.log('✅ Estado actualizado exitosamente');
-
-                // Actualizar la lista local
-                setPedidos(prev => prev.map(pedido =>
-                    pedido.id === pedidoId
-                        ? { ...pedido, estado: nuevoEstado }
-                        : pedido
-                ));
-
-                // Mostrar confirmación al usuario
-                const mensajes = {
-                    'aceptado': '✅ Pedido aceptado',
-                    'preparando': '👨‍🍳 Pedido en preparación',
-                    'listo': '🍽️ Pedido listo para entregar',
-                    'entregado': '✅ Pedido entregado',
-                    'cancelado': '❌ Pedido cancelado'
-                };
-
+            // ✅ PASO 1: Verificar autenticación
+            let session;
+            try {
+                session = await fetchAuthSession();
+                if (!session.tokens?.accessToken) {
+                    throw new Error('No access token available');
+                }
+            } catch (authError) {
+                console.error('❌ RESTAURANTE - Error de autenticación al actualizar:', authError);
                 Alert.alert(
-                    'Estado actualizado',
-                    `${mensajes[nuevoEstado as keyof typeof mensajes]} - ${numeroOrden}`
+                    'Sesión expirada',
+                    'Tu sesión ha expirada. Por favor inicia sesión nuevamente.',
+                    [
+                        {
+                            text: 'Iniciar sesión',
+                            onPress: () => router.replace('/(auth)/iniciaSesion')
+                        }
+                    ]
                 );
-            } else {
-                console.error('❌ Error actualizando estado:', resultado.error);
-                Alert.alert('Error', resultado.error || 'No se pudo actualizar el pedido');
+                return;
             }
-        } catch (error) {
-            console.error('❌ Error inesperado actualizando estado:', error);
-            Alert.alert('Error', 'Ocurrió un error inesperado');
+
+            // ✅ PASO 2: Obtener pedido actual para obtener restauranteId
+            const { data: pedidoActual, errors: getErrors } = await client.models.Pedido.get({
+                id: pedidoId
+            });
+
+            if (getErrors && getErrors.length > 0) {
+                console.error('❌ RESTAURANTE - Error obteniendo pedido:', getErrors);
+                Alert.alert('Error', 'No se pudo obtener la información del pedido');
+                return;
+            }
+
+            if (!pedidoActual) {
+                Alert.alert('Error', 'Pedido no encontrado');
+                return;
+            }
+
+            // ✅ PASO 3: Preparar datos de actualización
+            const updateData: any = {
+                id: pedidoId,
+                estado: nuevoEstado,
+                restauranteEstado: `${pedidoActual.restauranteId}#${nuevoEstado}`,
+            };
+
+            const now = new Date().toISOString();
+            switch (nuevoEstado) {
+                case 'aceptado':
+                    updateData.fechaAceptado = now;
+                    updateData.tiempoEstimado = 20;
+                    break;
+                case 'listo':
+                    updateData.fechaListo = now;
+                    break;
+                case 'entregado':
+                    updateData.fechaEntregado = now;
+                    break;
+            }
+
+            console.log('📝 RESTAURANTE - Actualizando en AppSync:', updateData);
+
+            // ✅ PASO 4: Actualizar en AppSync/DynamoDB
+            const { data: pedidoActualizado, errors: updateErrors } = await client.models.Pedido.update(updateData);
+
+            if (updateErrors && updateErrors.length > 0) {
+                console.error('❌ RESTAURANTE - Errores al actualizar:', updateErrors);
+                Alert.alert('Error', updateErrors[0].message || 'No se pudo actualizar el pedido');
+                return;
+            }
+
+            if (!pedidoActualizado) {
+                Alert.alert('Error', 'No se recibió confirmación de la actualización');
+                return;
+            }
+
+            console.log('✅ RESTAURANTE - Pedido actualizado exitosamente:', pedidoActualizado);
+
+            // ✅ PASO 5: Actualizar lista local inmediatamente
+            setPedidos(prev => prev.map(pedido =>
+                pedido.id === pedidoId
+                    ? { ...pedido, estado: nuevoEstado }
+                    : pedido
+            ));
+
+            // ✅ Mostrar confirmación al usuario
+            const mensajes = {
+                'aceptado': '✅ Pedido aceptado',
+                'preparando': '👨‍🍳 Pedido en preparación',
+                'listo': '🍽️ Pedido listo para entregar',
+                'entregado': '✅ Pedido entregado',
+                'cancelado': '❌ Pedido cancelado'
+            };
+
+            Alert.alert(
+                'Estado actualizado',
+                `${mensajes[nuevoEstado as keyof typeof mensajes]} - ${numeroOrden}`
+            );
+
+        } catch (error: any) {
+            console.error('❌ RESTAURANTE - Error inesperado actualizando:', error);
+            Alert.alert('Error', 'Ocurrió un error inesperado al actualizar el pedido');
         }
     };
 
+    // ✅ Funciones auxiliares sin cambios
     const getEstadoColor = (estado: string) => {
         switch (estado) {
             case 'pendiente': return 'bg-yellow-100 text-yellow-800 border-yellow-200';
@@ -145,7 +319,7 @@ const PedidosRestaurante = () => {
     };
 
     const formatearPrecio = (precio: number) => {
-        return `$${precio.toLocaleString('es-CO')}`;
+        return `${precio.toLocaleString('es-CO')}`;
     };
 
     const formatearFecha = (fechaISO: string) => {
@@ -189,7 +363,7 @@ const PedidosRestaurante = () => {
                         <Home size={20} color="#132e3c" />
                     </TouchableOpacity>
                     <View className="flex-1 items-center">
-                        <Text className="text-[#132e3c] text-xl font-JakartaBold">Pedidos Activos</Text>
+                        <Text className="text-[#132e3c] text-xl font-JakartaBold">Pedidos en Tiempo Real</Text>
                         <Text className="text-gray-600 text-sm font-JakartaMedium">
                             {user?.restaurantInfo?.nombreRestaurante}
                         </Text>
@@ -266,6 +440,9 @@ const PedidosRestaurante = () => {
                         <Text className="text-[#132e3c] text-lg font-JakartaBold">
                             Cargando pedidos...
                         </Text>
+                        <Text className="text-gray-600 text-sm font-JakartaMedium mt-2">
+                            Conectando con AppSync en tiempo real...
+                        </Text>
                     </View>
                 ) : pedidosActivos.length > 0 ? (
                     <>
@@ -311,36 +488,43 @@ const PedidosRestaurante = () => {
                                     <Text className="text-[#132e3c] font-JakartaBold text-sm mb-2">
                                         Productos:
                                     </Text>
-                                    {pedido.itemsPedido?.map((item: any, index: number) => (
-                                        <View key={index} className="flex-row justify-between items-center mb-1">
-                                            <Text className="text-gray-600 font-JakartaMedium text-sm flex-1">
-                                                {item.cantidad}x {item.platoNombre}
-                                            </Text>
-                                            <Text className="text-gray-800 font-JakartaBold text-sm">
-                                                {formatearPrecio(item.totalItem)}
-                                            </Text>
-                                        </View>
-                                    ))}
+                                    {pedido.itemsPedido && Array.isArray(pedido.itemsPedido) ? (
+                                        pedido.itemsPedido.map((item: any, index: number) => (
+                                            <View key={index} className="flex-row justify-between items-center mb-1">
+                                                <Text className="text-gray-600 font-JakartaMedium text-sm flex-1">
+                                                    {item.cantidad}x {item.platoNombre}
+                                                </Text>
+                                                <Text className="text-gray-800 font-JakartaBold text-sm">
+                                                    {formatearPrecio(item.totalItem)}
+                                                </Text>
+                                            </View>
+                                        ))
+                                    ) : (
+                                        <Text className="text-gray-500 font-JakartaMedium text-sm italic">
+                                            No se pudieron cargar los items del pedido
+                                        </Text>
+                                    )}
 
                                     {/* Toppings y comentarios si existen */}
-                                    {pedido.itemsPedido?.some((item: any) => item.toppingsSeleccionados?.length > 0 || item.comentarios) && (
-                                        <View className="mt-2 pl-4 border-l-2 border-gray-200">
-                                            {pedido.itemsPedido.map((item: any, index: number) => (
-                                                <View key={`details-${index}`}>
-                                                    {item.toppingsSeleccionados?.length > 0 && (
-                                                        <Text className="text-green-600 font-JakartaMedium text-xs">
-                                                            + {item.toppingsSeleccionados.map((t: any) => t.nombre).join(', ')}
-                                                        </Text>
-                                                    )}
-                                                    {item.comentarios && (
-                                                        <Text className="text-blue-600 font-JakartaMedium text-xs italic">
-                                                            "{item.comentarios}"
-                                                        </Text>
-                                                    )}
-                                                </View>
-                                            ))}
-                                        </View>
-                                    )}
+                                    {pedido.itemsPedido && Array.isArray(pedido.itemsPedido) &&
+                                        pedido.itemsPedido.some((item: any) => item.toppingsSeleccionados?.length > 0 || item.comentarios) && (
+                                            <View className="mt-2 pl-4 border-l-2 border-gray-200">
+                                                {pedido.itemsPedido.map((item: any, index: number) => (
+                                                    <View key={`details-${index}`}>
+                                                        {item.toppingsSeleccionados?.length > 0 && (
+                                                            <Text className="text-green-600 font-JakartaMedium text-xs">
+                                                                + {item.toppingsSeleccionados.map((t: any) => t.nombre).join(', ')}
+                                                            </Text>
+                                                        )}
+                                                        {item.comentarios && (
+                                                            <Text className="text-blue-600 font-JakartaMedium text-xs italic">
+                                                                "{item.comentarios}"
+                                                            </Text>
+                                                        )}
+                                                    </View>
+                                                ))}
+                                            </View>
+                                        )}
                                 </View>
 
                                 {/* Comentarios del cliente si existen */}
@@ -423,13 +607,13 @@ const PedidosRestaurante = () => {
                             </View>
                         ))}
 
-                        {/* Información de actualización */}
-                        <View className="bg-blue-50 rounded-xl p-4 mt-4">
-                            <Text className="text-blue-800 font-JakartaBold text-sm mb-2">
-                                🔄 Datos en tiempo real
+                        {/* Información de tiempo real */}
+                        <View className="bg-green-50 rounded-xl p-4 mt-4">
+                            <Text className="text-green-800 font-JakartaBold text-sm mb-2">
+                                🚀 Sistema en Tiempo Real
                             </Text>
-                            <Text className="text-blue-700 font-JakartaMedium text-xs">
-                                Los pedidos se cargan desde la base de datos. Desliza hacia abajo para actualizar o toca el botón de refrescar.
+                            <Text className="text-green-700 font-JakartaMedium text-xs">
+                                Los pedidos se cargan directamente desde AWS DynamoDB a través de AppSync. Los cambios se reflejan inmediatamente.
                             </Text>
                         </View>
                     </>
@@ -453,6 +637,24 @@ const PedidosRestaurante = () => {
                                 Actualizar
                             </Text>
                         </TouchableOpacity>
+                    </View>
+                )}
+
+                {/* ✅ Debug info en desarrollo */}
+                {__DEV__ && (
+                    <View className="mt-4 p-4 bg-blue-50 rounded-xl">
+                        <Text className="text-blue-800 font-JakartaBold text-sm mb-2">
+                            🔧 DEV - AppSync + DynamoDB:
+                        </Text>
+                        <Text className="text-blue-600 font-JakartaMedium text-xs">
+                            Total pedidos: {pedidos.length} | Activos: {pedidosActivos.length}
+                        </Text>
+                        <Text className="text-blue-600 font-JakartaMedium text-xs">
+                            Filtro: {filtroEstado} | Restaurante: {user?.restaurantInfo?.restauranteId}
+                        </Text>
+                        <Text className="text-blue-600 font-JakartaMedium text-xs">
+                            Última actualización: {new Date().toLocaleTimeString()}
+                        </Text>
                     </View>
                 )}
 

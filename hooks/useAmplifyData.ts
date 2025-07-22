@@ -1,88 +1,12 @@
-// hooks/useAmplifyData.ts - Versión directa usando GraphQL
-import { generateClient } from 'aws-amplify/api';
+// hooks/useAmplifyData.ts - Versión corregida para Gen 2
+import { generateClient } from 'aws-amplify/data';
+import type { Schema } from '@/amplify/data/resource';
 import { useAuth } from './useAuth';
 
-// ✅ Cliente directo de GraphQL
-const client = generateClient();
-
-// ✅ Queries y mutaciones directas en GraphQL
-const CREATE_PEDIDO = `
-  mutation CreatePedido($input: CreatePedidoInput!) {
-    createPedido(input: $input) {
-      id
-      numeroOrden
-      usuarioEmail
-      restauranteId
-      subtotal
-      tarifaServicio
-      total
-      estado
-      fechaPedido
-      comentariosCliente
-      universidadId
-      restauranteEstado
-      itemsPedido
-      createdAt
-      updatedAt
-    }
-  }
-`;
-
-const LIST_PEDIDOS_BY_RESTAURANTE = `
-  query ListPedidosByRestaurante($filter: ModelPedidoFilterInput) {
-    listPedidos(filter: $filter) {
-      items {
-        id
-        numeroOrden
-        usuarioEmail
-        restauranteId
-        subtotal
-        tarifaServicio
-        total
-        estado
-        fechaPedido
-        fechaAceptado
-        fechaListo
-        fechaEntregado
-        comentariosCliente
-        comentariosRestaurante
-        tiempoEstimado
-        universidadId
-        restauranteEstado
-        itemsPedido
-        createdAt
-        updatedAt
-      }
-    }
-  }
-`;
-
-const UPDATE_PEDIDO = `
-  mutation UpdatePedido($input: UpdatePedidoInput!) {
-    updatePedido(input: $input) {
-      id
-      numeroOrden
-      estado
-      fechaAceptado
-      fechaListo
-      fechaEntregado
-      comentariosRestaurante
-      tiempoEstimado
-      restauranteEstado
-      updatedAt
-    }
-  }
-`;
-
-const GET_PEDIDO = `
-  query GetPedido($id: ID!) {
-    getPedido(id: $id) {
-      id
-      restauranteId
-      estado
-    }
-  }
-`;
+// ✅ Cliente tipado de Gen 2 - usa el schema definido
+const client = generateClient<Schema>({
+    authMode: 'userPool', // Especificar modo de auth explícitamente
+});
 
 // ✅ Tipos para los resultados
 interface PedidoResult {
@@ -119,7 +43,11 @@ export const useAmplifyData = () => {
                 throw new Error('Usuario no autenticado localmente');
             }
 
-            await verificarSesion();
+            // ✅ Verificar que la sesión sigue activa
+            const currentUser = await verificarSesion();
+            if (!currentUser) {
+                throw new Error('Sesión expirada');
+            }
 
             console.log('✅ Usuario autenticado verificado:', {
                 email: user.email,
@@ -135,10 +63,10 @@ export const useAmplifyData = () => {
         }
     };
 
-    // ✅ CREAR PEDIDO usando GraphQL directo
+    // ✅ CREAR PEDIDO usando Gen 2 client
     const crearPedido = async (carritoItems: any[], total: number): Promise<PedidoResult> => {
         try {
-            console.log('📝 Creando pedido con GraphQL directo...');
+            console.log('📝 Creando pedido con Gen 2 client...');
 
             if (!carritoItems || carritoItems.length === 0) {
                 return {
@@ -147,6 +75,7 @@ export const useAmplifyData = () => {
                 };
             }
 
+            // ✅ Verificar autenticación ANTES de hacer la llamada
             await verificarAutenticacion();
 
             const primerItem = carritoItems[0];
@@ -156,14 +85,15 @@ export const useAmplifyData = () => {
             const tarifaServicio = Math.round(total * 0.05);
             const numeroOrden = generateShortOrderNumber();
 
-            const input = {
+            // ✅ Preparar datos para el modelo Pedido
+            const pedidoData = {
                 numeroOrden,
                 usuarioEmail: user!.email,
                 restauranteId,
                 subtotal,
                 tarifaServicio,
                 total,
-                estado: 'pendiente',
+                estado: 'pendiente' as const,
                 fechaPedido: new Date().toISOString(),
                 comentariosCliente: carritoItems
                     .filter(item => item.comentarios?.trim())
@@ -171,7 +101,7 @@ export const useAmplifyData = () => {
                     .join('; ') || undefined,
                 universidadId,
                 restauranteEstado: `${restauranteId}#pendiente`,
-                itemsPedido: JSON.stringify(carritoItems.map(item => ({
+                itemsPedido: carritoItems.map(item => ({
                     platoId: item.plato.idPlato,
                     platoNombre: item.plato.nombre,
                     platoDescripcion: item.plato.descripcion,
@@ -185,22 +115,44 @@ export const useAmplifyData = () => {
                     idUnico: item.idUnico,
                     restauranteNombre: item.nombreRestaurante,
                     universidadNombre: item.nombreUniversidad
-                })))
+                }))
             };
 
-            console.log('📋 Enviando mutación createPedido:', {
+            console.log('📋 Creando pedido con Gen 2:', {
                 numeroOrden,
                 restauranteId,
                 universidadId,
-                total
+                total,
+                userEmail: user!.email
             });
 
-            const result = await client.graphql({
-                query: CREATE_PEDIDO,
-                variables: { input }
-            });
+            // ✅ Usar client.models.Pedido.create en lugar de GraphQL manual
+            const { data: pedido, errors } = await client.models.Pedido.create(pedidoData);
 
-            const pedido = result.data?.createPedido;
+            if (errors && errors.length > 0) {
+                console.error('❌ Errores en creación:', errors);
+
+                // ✅ Detectar errores de autenticación específicos
+                const authError = errors.find(err =>
+                    err.message?.includes('Unauthorized') ||
+                    err.message?.includes('Not Authorized') ||
+                    err.message?.includes('authentication')
+                );
+
+                if (authError) {
+                    return {
+                        success: false,
+                        error: 'Sesión expirada. Por favor inicia sesión nuevamente.',
+                        needsReauth: true
+                    };
+                }
+
+                return {
+                    success: false,
+                    error: errors[0].message || 'Error creando pedido'
+                };
+            }
+
             if (!pedido) {
                 return {
                     success: false,
@@ -208,7 +160,7 @@ export const useAmplifyData = () => {
                 };
             }
 
-            console.log('✅ Pedido creado exitosamente:', pedido);
+            console.log('✅ Pedido creado exitosamente con Gen 2:', pedido);
 
             return {
                 success: true,
@@ -221,8 +173,13 @@ export const useAmplifyData = () => {
         } catch (error: any) {
             console.error('❌ Error creando pedido:', error);
 
+            // ✅ Manejo mejorado de errores de autenticación
             if (error.message?.includes('autenticación') ||
-                error.message?.includes('authentication')) {
+                error.message?.includes('authentication') ||
+                error.message?.includes('Unauthorized') ||
+                error.message?.includes('Not Authorized') ||
+                error.name?.includes('NotAuthorizedException') ||
+                error.name?.includes('UnauthorizedException')) {
                 return {
                     success: false,
                     error: 'Sesión expirada. Por favor inicia sesión nuevamente.',
@@ -237,7 +194,7 @@ export const useAmplifyData = () => {
         }
     };
 
-    // ✅ OBTENER PEDIDOS usando GraphQL directo
+    // ✅ OBTENER PEDIDOS - Adaptado para Gen 2
     const obtenerPedidosRestaurante = async (restauranteId: number, estado?: string): Promise<PedidosResult> => {
         try {
             if (!user?.restaurantInfo) {
@@ -249,30 +206,63 @@ export const useAmplifyData = () => {
 
             await verificarAutenticacion();
 
-            console.log('📋 Obteniendo pedidos con GraphQL directo:', {
+            console.log('📋 Obteniendo pedidos con Gen 2:', {
                 restauranteId,
                 estado: estado || 'todos'
             });
 
-            let filter: any;
+            let result;
+
             if (estado) {
-                filter = {
-                    restauranteEstado: { eq: `${restauranteId}#${estado}` }
-                };
+                // ✅ Filtrar por restauranteEstado usando Gen 2
+                const { data: pedidos, errors } = await client.models.Pedido.list({
+                    filter: {
+                        restauranteEstado: {
+                            eq: `${restauranteId}#${estado}`
+                        }
+                    }
+                });
+
+                result = { data: pedidos, errors };
             } else {
-                filter = {
-                    restauranteId: { eq: restauranteId.toString() }
+                // ✅ Filtrar solo por restauranteId usando Gen 2
+                const { data: pedidos, errors } = await client.models.Pedido.list({
+                    filter: {
+                        restauranteId: {
+                            eq: restauranteId.toString()
+                        }
+                    }
+                });
+
+                result = { data: pedidos, errors };
+            }
+
+            if (result.errors && result.errors.length > 0) {
+                console.error('❌ Errores obteniendo pedidos:', result.errors);
+
+                // ✅ Detectar errores de autenticación
+                const authError = result.errors.find((err: any) =>
+                    err.message?.includes('Unauthorized') ||
+                    err.message?.includes('Not Authorized')
+                );
+
+                if (authError) {
+                    return {
+                        success: false,
+                        error: 'Sesión expirada. Por favor inicia sesión nuevamente.',
+                        needsReauth: true
+                    };
+                }
+
+                return {
+                    success: false,
+                    error: result.errors[0].message || 'Error obteniendo pedidos'
                 };
             }
 
-            const result = await client.graphql({
-                query: LIST_PEDIDOS_BY_RESTAURANTE,
-                variables: { filter }
-            });
+            const pedidos = result.data || [];
 
-            const pedidos = result.data?.listPedidos?.items || [];
-
-            // Parsear itemsPedido de JSON string a objeto
+            // ✅ Procesar itemsPedido (puede venir como string o ya como objeto)
             const pedidosProcesados = pedidos.map((pedido: any) => ({
                 ...pedido,
                 itemsPedido: typeof pedido.itemsPedido === 'string'
@@ -280,11 +270,12 @@ export const useAmplifyData = () => {
                     : pedido.itemsPedido
             }));
 
+            // ✅ Ordenar por fecha más reciente
             const pedidosOrdenados = pedidosProcesados.sort((a: any, b: any) =>
                 new Date(b.fechaPedido).getTime() - new Date(a.fechaPedido).getTime()
             );
 
-            console.log('✅ Pedidos obtenidos:', {
+            console.log('✅ Pedidos obtenidos con Gen 2:', {
                 total: pedidosOrdenados.length,
                 estados: pedidosOrdenados.reduce((acc: any, p: any) => {
                     acc[p.estado] = (acc[p.estado] || 0) + 1;
@@ -301,7 +292,8 @@ export const useAmplifyData = () => {
         } catch (error: any) {
             console.error('❌ Error obteniendo pedidos:', error);
 
-            if (error.message?.includes('autenticación')) {
+            if (error.message?.includes('autenticación') ||
+                error.name?.includes('NotAuthorizedException')) {
                 return {
                     success: false,
                     error: 'Sesión expirada. Por favor inicia sesión nuevamente.',
@@ -316,7 +308,7 @@ export const useAmplifyData = () => {
         }
     };
 
-    // ✅ ACTUALIZAR ESTADO usando GraphQL directo
+    // ✅ ACTUALIZAR ESTADO - Adaptado para Gen 2
     const actualizarEstadoPedido = async (pedidoId: string, nuevoEstado: string, comentarios?: string): Promise<UpdateResult> => {
         try {
             if (!user?.restaurantInfo) {
@@ -328,17 +320,30 @@ export const useAmplifyData = () => {
 
             await verificarAutenticacion();
 
-            console.log('🔄 Actualizando pedido con GraphQL directo:', { pedidoId, nuevoEstado });
+            console.log('🔄 Actualizando pedido con Gen 2:', { pedidoId, nuevoEstado });
 
-            // Primero obtener el pedido actual
-            const getResult = await client.graphql({
-                query: GET_PEDIDO,
-                variables: { id: pedidoId }
+            // ✅ Primero obtener el pedido actual usando Gen 2
+            const { data: pedidoActual, errors: getErrors } = await client.models.Pedido.get({
+                id: pedidoId
             });
 
-            const pedidoActual = getResult.data.getPedido;
+            if (getErrors && getErrors.length > 0) {
+                console.error('❌ Errores obteniendo pedido:', getErrors);
+                return {
+                    success: false,
+                    error: getErrors[0].message || 'Error obteniendo pedido actual'
+                };
+            }
 
-            const input: any = {
+            if (!pedidoActual) {
+                return {
+                    success: false,
+                    error: 'Pedido no encontrado'
+                };
+            }
+
+            // ✅ Preparar datos de actualización
+            const updateData: any = {
                 id: pedidoId,
                 estado: nuevoEstado,
                 restauranteEstado: `${pedidoActual.restauranteId}#${nuevoEstado}`,
@@ -347,44 +352,51 @@ export const useAmplifyData = () => {
             const now = new Date().toISOString();
             switch (nuevoEstado) {
                 case 'aceptado':
-                    input.fechaAceptado = now;
-                    input.tiempoEstimado = 20;
+                    updateData.fechaAceptado = now;
+                    updateData.tiempoEstimado = 20;
                     break;
                 case 'listo':
-                    input.fechaListo = now;
+                    updateData.fechaListo = now;
                     break;
                 case 'entregado':
-                    input.fechaEntregado = now;
+                    updateData.fechaEntregado = now;
                     break;
             }
 
             if (comentarios) {
-                input.comentariosRestaurante = comentarios;
+                updateData.comentariosRestaurante = comentarios;
             }
 
-            const updateResult = await client.graphql({
-                query: UPDATE_PEDIDO,
-                variables: { input }
-            });
+            // ✅ Actualizar usando Gen 2
+            const { data: pedidoActualizado, errors: updateErrors } = await client.models.Pedido.update(updateData);
 
-            if ('data' in updateResult && updateResult.data) {
-                console.log('✅ Pedido actualizado:', updateResult.data.updatePedido);
+            if (updateErrors && updateErrors.length > 0) {
+                console.error('❌ Errores actualizando pedido:', updateErrors);
+                return {
+                    success: false,
+                    error: updateErrors[0].message || 'Error actualizando pedido'
+                };
+            }
+
+            if (pedidoActualizado) {
+                console.log('✅ Pedido actualizado con Gen 2:', pedidoActualizado);
 
                 return {
                     success: true,
-                    pedido: updateResult.data.updatePedido
+                    pedido: pedidoActualizado
                 };
             } else {
                 return {
                     success: false,
-                    error: 'Error GraphQL: No se pudo actualizar el pedido'
+                    error: 'Error: No se pudo actualizar el pedido'
                 };
             }
 
         } catch (error: any) {
             console.error('❌ Error actualizando estado:', error);
 
-            if (error.message?.includes('autenticación')) {
+            if (error.message?.includes('autenticación') ||
+                error.name?.includes('NotAuthorizedException')) {
                 return {
                     success: false,
                     error: 'Sesión expirada. Por favor inicia sesión nuevamente.',
@@ -399,7 +411,7 @@ export const useAmplifyData = () => {
         }
     };
 
-    // ✅ OBTENER MIS PEDIDOS
+    // ✅ OBTENER MIS PEDIDOS - Adaptado para Gen 2
     const obtenerMisPedidos = async (): Promise<PedidosResult> => {
         try {
             if (!user?.email) {
@@ -411,22 +423,31 @@ export const useAmplifyData = () => {
 
             await verificarAutenticacion();
 
-            const result = await client.graphql({
-                query: LIST_PEDIDOS_BY_RESTAURANTE,
-                variables: {
-                    filter: { usuarioEmail: { eq: user.email } }
+            // ✅ Obtener pedidos del usuario usando Gen 2
+            const { data: pedidos, errors } = await client.models.Pedido.list({
+                filter: {
+                    usuarioEmail: {
+                        eq: user.email
+                    }
                 }
             });
 
-            // Type guard to ensure result has 'data'
-            if (!('data' in result) || !result.data || !result.data.listPedidos) {
+            if (errors && errors.length > 0) {
+                console.error('❌ Errores obteniendo mis pedidos:', errors);
                 return {
                     success: false,
-                    error: 'Error GraphQL: No se pudo obtener los pedidos'
+                    error: errors[0].message || 'Error obteniendo mis pedidos'
                 };
             }
 
-            const pedidos = result.data.listPedidos.items || [];
+            if (!pedidos) {
+                return {
+                    success: false,
+                    error: 'No se pudieron obtener los pedidos'
+                };
+            }
+
+            // ✅ Ordenar por fecha más reciente
             const pedidosOrdenados = pedidos.sort((a: any, b: any) =>
                 new Date(b.fechaPedido).getTime() - new Date(a.fechaPedido).getTime()
             );
@@ -438,6 +459,15 @@ export const useAmplifyData = () => {
 
         } catch (error: any) {
             console.error('❌ Error obteniendo mis pedidos:', error);
+
+            if (error.name?.includes('NotAuthorizedException')) {
+                return {
+                    success: false,
+                    error: 'Sesión expirada. Por favor inicia sesión nuevamente.',
+                    needsReauth: true
+                };
+            }
+
             return {
                 success: false,
                 error: error.message || 'Error obteniendo pedidos'
@@ -455,7 +485,7 @@ export const useAmplifyData = () => {
     };
 };
 
-// ✅ Función para generar número de orden corto
+// ✅ Función para generar número de orden corto - sin cambios
 function generateShortOrderNumber(): string {
     const timestamp = Date.now();
     const shortTimestamp = timestamp % 1000000;

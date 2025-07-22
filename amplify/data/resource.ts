@@ -61,13 +61,13 @@ const schema = a.schema({
       allow.authenticated().to(['read']),
     ]),
 
-  // ✅ MODELO COMPLETO de pedidos para la vida real
+  // ✅ MODELO PEDIDO CORREGIDO - Sin usar owner() que causa el error
   Pedido: a
     .model({
       // Información básica del pedido
-      numeroOrden: a.string().required(), // Código corto como #A1B2C-D3E
+      numeroOrden: a.string().required(),
       usuarioEmail: a.string().required(),
-      restauranteId: a.id().required(),
+      restauranteId: a.string().required(),
       restaurante: a.belongsTo('Restaurante', 'restauranteId'),
 
       // Información financiera
@@ -85,32 +85,32 @@ const schema = a.schema({
       // Información adicional
       comentariosCliente: a.string(),
       comentariosRestaurante: a.string(),
-      tiempoEstimado: a.integer(), // minutos
+      tiempoEstimado: a.integer(),
 
       // Información del cliente (para mostrar en el restaurante)
       clienteNombre: a.string(),
       clienteTelefono: a.string(),
 
-      // Items del pedido en JSON para simplicidad
-      itemsPedido: a.json().required(), // Array de items con toda la info
+      // Items del pedido en JSON
+      itemsPedido: a.json().required(),
 
       // Información de la universidad para filtros
       universidadId: a.integer().required(),
 
-      // Índices para consultas eficientes
-      restauranteEstado: a.string().required(), // "restauranteId#estado" para filtrar
+      // Índice para consultas eficientes
+      restauranteEstado: a.string().required(),
     })
     .authorization((allow) => [
-      // Cualquier usuario autenticado puede crear y leer pedidos
+      // ✅ CORREGIDO: Solo usar authenticated() sin owner()
       allow.authenticated().to(['create', 'read', 'update']),
-      // Los invitados pueden leer (por si es necesario)
+      // ✅ Los invitados pueden leer para casos específicos
       allow.guest().to(['read']),
     ])
-    // Índices para consultas eficientes
+    // ✅ Índices secundarios para consultas eficientes
     .secondaryIndexes((index) => [
-      index('restauranteEstado'), // Para obtener pedidos por restaurante y estado
-      index('usuarioEmail'), // Para obtener pedidos por usuario
-      index('restauranteId'), // Para obtener todos los pedidos de un restaurante
+      index('restauranteEstado').sortKeys(['fechaPedido']), // Para pedidos por restaurante y estado
+      index('usuarioEmail').sortKeys(['fechaPedido']), // Para pedidos por usuario
+      index('restauranteId').sortKeys(['fechaPedido']), // Para todos los pedidos de un restaurante
     ]),
 });
 
@@ -121,7 +121,9 @@ export type Schema = ClientSchema<typeof schema>;
 export const data = defineData({
   schema,
   authorizationModes: {
-    defaultAuthorizationMode: 'userPool', // Mantener userPool para autenticación real
+    // ✅ userPool como modo primario
+    defaultAuthorizationMode: 'userPool',
+    // ✅ API Key como secundario
     apiKeyAuthorizationMode: {
       expiresInDays: 30,
     },
