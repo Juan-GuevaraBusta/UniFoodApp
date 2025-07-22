@@ -1,4 +1,4 @@
-// hooks/useAmplifyData.ts - Versión corregida para Gen 2
+// hooks/useAmplifyData.ts - Versión corregida para Gen 2 - COMPLETA
 import { generateClient } from 'aws-amplify/data';
 import type { Schema } from '@/amplify/data/resource';
 import { useAuth } from './useAuth';
@@ -63,7 +63,7 @@ export const useAmplifyData = () => {
         }
     };
 
-    // ✅ CREAR PEDIDO usando Gen 2 client
+    // ✅ CREAR PEDIDO usando Gen 2 client - CORREGIDO
     const crearPedido = async (carritoItems: any[], total: number): Promise<PedidoResult> => {
         try {
             console.log('📝 Creando pedido con Gen 2 client...');
@@ -85,10 +85,30 @@ export const useAmplifyData = () => {
             const tarifaServicio = Math.round(total * 0.05);
             const numeroOrden = generateShortOrderNumber();
 
-            // ✅ Preparar datos para el modelo Pedido
+            if (!user?.email) {
+                throw new Error('No se pudo obtener el email del usuario');
+            }
+
+            // ✅ CRÍTICO: Preparar itemsPedido como JSON string
+            const itemsPedidoArray = carritoItems.map(item => ({
+                platoId: item.plato.idPlato,
+                platoNombre: item.plato.nombre,
+                platoDescripcion: item.plato.descripcion,
+                precioUnitario: item.plato.precio,
+                cantidad: item.cantidad,
+                comentarios: item.comentarios || undefined,
+                toppingsSeleccionados: item.toppingsSeleccionados || [],
+                toppingsBaseRemocionados: item.toppingsBaseRemocionados || [],
+                precioTotal: item.precioTotal,
+                totalItem: item.precioTotal * item.cantidad,
+                idUnico: item.idUnico,
+                restauranteNombre: item.nombreRestaurante,
+                universidadNombre: item.nombreUniversidad
+            }));
+
             const pedidoData = {
                 numeroOrden,
-                usuarioEmail: user!.email,
+                usuarioEmail: user.email,
                 restauranteId,
                 subtotal,
                 tarifaServicio,
@@ -101,21 +121,8 @@ export const useAmplifyData = () => {
                     .join('; ') || undefined,
                 universidadId,
                 restauranteEstado: `${restauranteId}#pendiente`,
-                itemsPedido: carritoItems.map(item => ({
-                    platoId: item.plato.idPlato,
-                    platoNombre: item.plato.nombre,
-                    platoDescripcion: item.plato.descripcion,
-                    precioUnitario: item.plato.precio,
-                    cantidad: item.cantidad,
-                    comentarios: item.comentarios || undefined,
-                    toppingsSeleccionados: item.toppingsSeleccionados || [],
-                    toppingsBaseRemocionados: item.toppingsBaseRemocionados || [],
-                    precioTotal: item.precioTotal,
-                    totalItem: item.precioTotal * item.cantidad,
-                    idUnico: item.idUnico,
-                    restauranteNombre: item.nombreRestaurante,
-                    universidadNombre: item.nombreUniversidad
-                }))
+                // ✅ CORREGIDO: Serializar itemsPedido como JSON string
+                itemsPedido: JSON.stringify(itemsPedidoArray)
             };
 
             console.log('📋 Creando pedido con Gen 2:', {
@@ -123,7 +130,9 @@ export const useAmplifyData = () => {
                 restauranteId,
                 universidadId,
                 total,
-                userEmail: user!.email
+                userEmail: user.email,
+                itemsCount: itemsPedidoArray.length,
+                itemsPedidoType: typeof pedidoData.itemsPedido
             });
 
             // ✅ Usar client.models.Pedido.create en lugar de GraphQL manual
@@ -194,7 +203,7 @@ export const useAmplifyData = () => {
         }
     };
 
-    // ✅ OBTENER PEDIDOS - Adaptado para Gen 2
+    // ✅ OBTENER PEDIDOS - Adaptado para Gen 2 con parsing JSON
     const obtenerPedidosRestaurante = async (restauranteId: number, estado?: string): Promise<PedidosResult> => {
         try {
             if (!user?.restaurantInfo) {
@@ -262,12 +271,12 @@ export const useAmplifyData = () => {
 
             const pedidos = result.data || [];
 
-            // ✅ Procesar itemsPedido (puede venir como string o ya como objeto)
+            // ✅ CRÍTICO: Procesar itemsPedido (viene como string JSON)
             const pedidosProcesados = pedidos.map((pedido: any) => ({
                 ...pedido,
                 itemsPedido: typeof pedido.itemsPedido === 'string'
                     ? JSON.parse(pedido.itemsPedido)
-                    : pedido.itemsPedido
+                    : pedido.itemsPedido || []
             }));
 
             // ✅ Ordenar por fecha más reciente
@@ -411,7 +420,7 @@ export const useAmplifyData = () => {
         }
     };
 
-    // ✅ OBTENER MIS PEDIDOS - Adaptado para Gen 2
+    // ✅ OBTENER MIS PEDIDOS - Adaptado para Gen 2 con parsing JSON
     const obtenerMisPedidos = async (): Promise<PedidosResult> => {
         try {
             if (!user?.email) {
@@ -447,8 +456,16 @@ export const useAmplifyData = () => {
                 };
             }
 
+            // ✅ CRÍTICO: Procesar itemsPedido (viene como string JSON)
+            const pedidosProcesados = pedidos.map((pedido: any) => ({
+                ...pedido,
+                itemsPedido: typeof pedido.itemsPedido === 'string'
+                    ? JSON.parse(pedido.itemsPedido)
+                    : pedido.itemsPedido || []
+            }));
+
             // ✅ Ordenar por fecha más reciente
-            const pedidosOrdenados = pedidos.sort((a: any, b: any) =>
+            const pedidosOrdenados = pedidosProcesados.sort((a: any, b: any) =>
                 new Date(b.fechaPedido).getTime() - new Date(a.fechaPedido).getTime()
             );
 

@@ -1,5 +1,5 @@
 /* eslint-disable prettier/prettier */
-// app/(root)/(restaurants)/pagoPlato.tsx - VERSIÓN PRODUCCIÓN CON GRAPHQL REAL
+// app/(root)/(restaurants)/pagoPlato.tsx - VERSIÓN PRODUCCIÓN CON GRAPHQL REAL - CORREGIDO
 import { Text, TouchableOpacity, View, ScrollView, Image, Alert, ActivityIndicator } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from 'expo-router';
@@ -38,10 +38,17 @@ const PagoPlato = () => {
     const tarifaServicio = Math.round(subtotal * 0.05);
     const total = subtotal + tarifaServicio;
 
-    // ✅ FUNCIÓN PRINCIPAL: Crear pedido real en GraphQL/AppSync
+    // ✅ FUNCIÓN PRINCIPAL: Crear pedido real en GraphQL/AppSync - CORREGIDA
     const crearPedidoProduccion = async (): Promise<{ success: boolean, numeroOrden?: string, pedidoId?: string, error?: string, needsReauth?: boolean }> => {
         try {
             console.log('🚀 PRODUCCIÓN - Iniciando creación de pedido real...');
+
+            if (!carrito || carrito.length === 0) {
+                return {
+                    success: false,
+                    error: 'El carrito está vacío'
+                };
+            }
 
             // ✅ PASO 1: Verificar usuario actual y sesión
             let currentUser;
@@ -83,6 +90,23 @@ const PagoPlato = () => {
                 throw new Error('No se pudo obtener el email del usuario');
             }
 
+            // ✅ PASO 3: Preparar itemsPedido como JSON string - CORREGIDO
+            const itemsPedidoArray = carrito.map(item => ({
+                platoId: item.plato.idPlato,
+                platoNombre: item.plato.nombre,
+                platoDescripcion: item.plato.descripcion,
+                precioUnitario: item.plato.precio,
+                cantidad: item.cantidad,
+                comentarios: item.comentarios || undefined,
+                toppingsSeleccionados: item.toppingsSeleccionados || [],
+                toppingsBaseRemocionados: item.toppingsBaseRemocionados || [],
+                precioTotal: item.precioTotal,
+                totalItem: item.precioTotal * item.cantidad,
+                idUnico: item.idUnico,
+                restauranteNombre: item.nombreRestaurante,
+                universidadNombre: item.nombreUniversidad
+            }));
+
             const pedidoData = {
                 numeroOrden,
                 usuarioEmail,
@@ -98,32 +122,21 @@ const PagoPlato = () => {
                     .join('; ') || undefined,
                 universidadId,
                 restauranteEstado: `${restauranteId}#pendiente`,
-                itemsPedido: carrito.map(item => ({
-                    platoId: item.plato.idPlato,
-                    platoNombre: item.plato.nombre,
-                    platoDescripcion: item.plato.descripcion,
-                    precioUnitario: item.plato.precio,
-                    cantidad: item.cantidad,
-                    comentarios: item.comentarios || undefined,
-                    toppingsSeleccionados: item.toppingsSeleccionados || [],
-                    toppingsBaseRemocionados: item.toppingsBaseRemocionados || [],
-                    precioTotal: item.precioTotal,
-                    totalItem: item.precioTotal * item.cantidad,
-                    idUnico: item.idUnico,
-                    restauranteNombre: item.nombreRestaurante,
-                    universidadNombre: item.nombreUniversidad
-                }))
+                // ✅ CRÍTICO: Serializar itemsPedido como JSON string
+                itemsPedido: JSON.stringify(itemsPedidoArray)
             };
 
             console.log('📋 PRODUCCIÓN - Datos del pedido preparados:', {
                 numeroOrden,
-                usuarioEmail,
                 restauranteId,
+                universidadId,
                 total,
-                itemsCount: pedidoData.itemsPedido.length
+                userEmail: usuarioEmail,
+                itemsCount: itemsPedidoArray.length,
+                itemsPedidoType: typeof pedidoData.itemsPedido
             });
 
-            // ✅ PASO 3: Crear pedido en AppSync usando client tipado
+            // ✅ PASO 4: Crear pedido en AppSync usando client tipado
             console.log('🔗 PRODUCCIÓN - Enviando a AppSync...');
 
             const { data: pedido, errors } = await client.models.Pedido.create(pedidoData);
@@ -558,7 +571,7 @@ const PagoPlato = () => {
                                 🚀 PRODUCCIÓN - AppSync + DynamoDB
                             </Text>
                             <Text className="text-green-700 font-JakartaMedium text-xs">
-                                Usuario: {user?.email} | GraphQL Client: Activo
+                                Usuario: {user?.email} | GraphQL Client: Activo | JSON serializado: SÍ
                             </Text>
                         </View>
                     )}
