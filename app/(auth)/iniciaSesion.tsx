@@ -120,18 +120,11 @@ const iniciaSesion = () => {
       <ScrollView className="flex-1" keyboardShouldPersistTaps="handled">
         {/* Header */}
         <View className="px-5 py-8">
-          <TouchableOpacity
-            onPress={() => router.back()}
-            className="mb-6"
-          >
-            <Text className="text-[#132e3c] text-lg font-JakartaBold">← Atrás</Text>
-          </TouchableOpacity>
-
           <Text className="text-[#132e3c] text-3xl font-JakartaExtraBold mb-2">
             ¡Hola de nuevo!
           </Text>
           <Text className="text-gray-600 text-base font-JakartaMedium">
-            Inicia sesión para continuar con UniFood
+            Inicia sesión para continuar con UniFud
           </Text>
         </View>
 
@@ -187,31 +180,6 @@ const iniciaSesion = () => {
             </View>
           </View>
 
-          {/* Información de cuentas de prueba */}
-          <View className="mb-6 p-4 bg-blue-50 rounded-xl">
-            <Text className="text-blue-800 font-JakartaBold text-sm mb-2">
-              Tipos de cuenta por email:
-            </Text>
-            <Text className="text-blue-700 font-JakartaMedium text-xs">
-              🎓 Estudiante: cualquier email{"\n"}
-              🍕 Restaurante: wonka@unifood.com, bristo@unifood.com{"\n"}
-              👨‍💼 Admin: admin@unifood.com
-            </Text>
-            <Text className="text-blue-600 font-JakartaMedium text-xs mt-2">
-              * Primero regístrate, luego inicia sesión
-            </Text>
-          </View>
-
-          {/* OPCIONAL: Mensaje sobre múltiples dispositivos */}
-          <View className="mb-6 p-3 bg-green-50 rounded-xl">
-            <Text className="text-green-800 font-JakartaBold text-sm mb-1">
-              📱 Múltiples dispositivos
-            </Text>
-            <Text className="text-green-700 font-JakartaMedium text-xs">
-              Puedes usar tu cuenta en varios dispositivos al mismo tiempo
-            </Text>
-          </View>
-
           {/* Botón Iniciar Sesión */}
           <TouchableOpacity
             onPress={handleLogin}
@@ -255,17 +223,6 @@ const iniciaSesion = () => {
             </TouchableOpacity>
           </View>
 
-          {/* Enlace para saltar autenticación (temporal para desarrollo) */}
-          <View className="mt-8 pt-6 border-t border-gray-200">
-            <TouchableOpacity
-              onPress={() => router.replace("/(root)/(tabs)/home")}
-              className="py-3"
-            >
-              <Text className="text-gray-500 font-JakartaMedium text-sm text-center">
-                Continuar sin cuenta (Temporal)
-              </Text>
-            </TouchableOpacity>
-          </View>
         </View>
       </ScrollView>
     </SafeAreaView>

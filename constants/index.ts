@@ -7,6 +7,7 @@ import javerianaCali from "@/assets/images/javerianaCali.jpeg";
 import bowlPrueba from "@/assets/images/bowlprueba.png";
 import star from "@/assets/icons/star.png";
 import clock from "@/assets/icons/alarm.png";
+import icon from "@/assets/images/icon.png";
 
 
 export const imagenes = {
@@ -15,7 +16,8 @@ export const imagenes = {
     bienvenido3,
     icesi,
     javerianaCali,
-    bowlPrueba
+    bowlPrueba,
+    icon
 };
 
 export const icons = {
