@@ -181,9 +181,9 @@ const PedidosActivos = () => {
     const getEstadoIcon = (estado: string) => {
         switch (estado) {
             case 'pendiente': return <Clock size={16} color="#D97706" />;
-            case 'aceptado': return <CheckCircle size={16} color="#3B82F6" />;
-            case 'preparando': return <Package size={16} color="#EA580C" />;
-            case 'listo': return <Truck size={16} color="#059669" />;
+            case 'preparando': return <ClipboardList size={16} color="#EA580C" />;
+            case 'listo': return <CheckCircle size={16} color="#059669" />;
+            case 'entregado': return <CheckCircle size={16} color="#6B7280" />;
             case 'cancelado': return <ClipboardList size={16} color="#DC2626" />;
             default: return <Clock size={16} color="#6B7280" />;
         }
@@ -192,9 +192,8 @@ const PedidosActivos = () => {
     const getEstadoDisplayName = (estado: string) => {
         switch (estado) {
             case 'pendiente': return 'Pendiente';
-            case 'aceptado': return 'Preparando';
-            case 'preparando': return 'Preparando';
-            case 'listo': return 'Listo';
+            case 'preparando': return 'En Preparación';
+            case 'listo': return 'Listo para Recoger';
             case 'entregado': return 'Entregado';
             case 'cancelado': return 'Cancelado';
             default: return estado;

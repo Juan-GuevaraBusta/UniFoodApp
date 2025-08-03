@@ -1,4 +1,5 @@
 import type { Schema } from '@/amplify/data/resource';
+import { getRestaurantInfoByEmail } from '@/constants/userRoles';
 import { useAuth } from "@/hooks/useAuth";
 import { useFocusEffect } from '@react-navigation/native';
 import { fetchAuthSession, getCurrentUser } from 'aws-amplify/auth';
@@ -8,7 +9,6 @@ import { CheckCircle, ClipboardList, Clock, Home, RefreshCw } from "lucide-react
 import { useCallback, useState } from "react";
 import { Alert, RefreshControl, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { getRestaurantInfoByEmail } from '@/constants/userRoles';
 
 // ✅ Cliente GraphQL tipado para producción
 const client = generateClient<Schema>();
@@ -295,16 +295,16 @@ const PedidosRestaurante = () => {
         }
     };
 
-    // ✅ FUNCIÓN PARA ACEPTAR PEDIDO
+    // ✅ FUNCIÓN PARA ACEPTAR PEDIDO (ACTUALIZADA)
     const aceptarPedido = async (pedidoId: string) => {
         Alert.alert(
             'Aceptar Pedido',
-            '¿Estás seguro de que quieres aceptar este pedido?',
+            '¿Confirmas que aceptas este pedido y comienzas su preparación?',
             [
                 { text: 'Cancelar', style: 'cancel' },
                 {
-                    text: 'Aceptar',
-                    onPress: () => actualizarEstadoPedido(pedidoId, 'aceptado')
+                    text: 'Aceptar y Preparar',
+                    onPress: () => actualizarEstadoPedido(pedidoId, 'preparando')
                 }
             ]
         );
@@ -314,7 +314,7 @@ const PedidosRestaurante = () => {
     const rechazarPedido = async (pedidoId: string) => {
         Alert.alert(
             'Rechazar Pedido',
-            '¿Estás seguro de que quieres rechazar este pedido?',
+            '¿Confirmas que rechazas este pedido?',
             [
                 { text: 'Cancelar', style: 'cancel' },
                 {
@@ -324,11 +324,6 @@ const PedidosRestaurante = () => {
                 }
             ]
         );
-    };
-
-    // ✅ FUNCIÓN PARA MARCAR COMO PREPARANDO
-    const prepararPedido = async (pedidoId: string) => {
-        actualizarEstadoPedido(pedidoId, 'preparando');
     };
 
     // ✅ FUNCIÓN PARA MARCAR COMO LISTO
@@ -351,7 +346,7 @@ const PedidosRestaurante = () => {
         );
     };
 
-    // ✅ FUNCIÓN PARA RENDERIZAR BOTONES SEGÚN ESTADO
+    // ✅ FUNCIÓN PARA RENDERIZAR BOTONES SEGÚN ESTADO (ACTUALIZADA)
     const renderBotonesAccion = (pedido: any) => {
         const isUpdating = updatingPedido === pedido.id;
 
@@ -380,20 +375,6 @@ const PedidosRestaurante = () => {
                             </Text>
                         </TouchableOpacity>
                     </View>
-                );
-
-            case 'aceptado':
-                return (
-                    <TouchableOpacity
-                        onPress={() => prepararPedido(pedido.id)}
-                        disabled={isUpdating}
-                        className={`mt-4 py-3 px-4 rounded-xl flex-row items-center justify-center ${isUpdating ? 'bg-gray-300' : 'bg-orange-500'}`}
-                    >
-                        <ClipboardList size={18} color="white" />
-                        <Text className="text-white font-JakartaBold text-sm ml-2">
-                            {isUpdating ? 'Procesando...' : 'Comenzar Preparación'}
-                        </Text>
-                    </TouchableOpacity>
                 );
 
             case 'preparando':
