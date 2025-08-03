@@ -4,35 +4,33 @@ import { useFocusEffect } from '@react-navigation/native';
 import { fetchAuthSession, getCurrentUser } from 'aws-amplify/auth';
 import { generateClient } from 'aws-amplify/data';
 import { router } from "expo-router";
-import { CheckCircle, ClipboardList, Clock, Home, RefreshCw } from "lucide-react-native";
+import { CheckCircle, ClipboardList, Clock, Home, Package, RefreshCw, Truck } from "lucide-react-native";
 import { useCallback, useState } from "react";
 import { Alert, RefreshControl, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { getRestaurantInfoByEmail } from '@/constants/userRoles';
 
 // ✅ Cliente GraphQL tipado para producción
 const client = generateClient<Schema>();
 
-const PedidosRestaurante = () => {
+const PedidosActivos = () => {
     const { user } = useAuth();
 
     const [pedidos, setPedidos] = useState<any[]>([]);
     const [refreshing, setRefreshing] = useState(false);
     const [loading, setLoading] = useState(true);
-    const [updatingPedido, setUpdatingPedido] = useState<string | null>(null);
 
     // ✅ Cargar pedidos al enfocar la pantalla
     useFocusEffect(
         useCallback(() => {
-            console.log('📱 RESTAURANTE - Pantalla pedidos enfocada, cargando pedidos...');
-            cargarPedidosDelRestaurante();
+            console.log(' USUARIO - Pantalla pedidos activos enfocada, cargando pedidos...');
+            cargarPedidosActivos();
         }, [])
     );
 
-    // ✅ FUNCIÓN ACTUALIZADA: Cargar solo los pedidos del restaurante del usuario
-    const cargarPedidosDelRestaurante = async () => {
+    // ✅ FUNCIÓN: Cargar pedidos activos del usuario
+    const cargarPedidosActivos = async () => {
         try {
-            console.log('📱 RESTAURANTE - Cargando pedidos del restaurante...');
+            console.log(' USUARIO - Cargando pedidos activos...');
 
             // ✅ PASO 1: Verificar autenticación básica
             let session;
@@ -41,9 +39,9 @@ const PedidosRestaurante = () => {
                 if (!session.tokens?.accessToken) {
                     throw new Error('No access token available');
                 }
-                console.log('✅ RESTAURANTE - Autenticación verificada');
+                console.log('✅ USUARIO - Autenticación verificada');
             } catch (authError) {
-                console.error('❌ RESTAURANTE - Error de autenticación:', authError);
+                console.error('❌ USUARIO - Error de autenticación:', authError);
                 Alert.alert('Error de sesión', 'Por favor inicia sesión nuevamente.');
                 setLoading(false);
                 return;
@@ -54,69 +52,49 @@ const PedidosRestaurante = () => {
             try {
                 const currentUser = await getCurrentUser();
                 userEmail = currentUser.signInDetails?.loginId || '';
-                console.log('🔍 RESTAURANTE - Email obtenido de getCurrentUser:', userEmail);
+                console.log('🔍 USUARIO - Email obtenido de getCurrentUser:', userEmail);
             } catch (userError) {
-                console.error('❌ RESTAURANTE - Error obteniendo usuario actual:', userError);
+                console.error('❌ USUARIO - Error obteniendo usuario actual:', userError);
                 // Intentar obtener desde el hook useAuth como respaldo
                 userEmail = user?.email || '';
-                console.log('🔍 RESTAURANTE - Email obtenido de useAuth como respaldo:', userEmail);
+                console.log('🔍 USUARIO - Email obtenido de useAuth como respaldo:', userEmail);
             }
 
             if (!userEmail) {
-                console.error('❌ RESTAURANTE - No se pudo obtener el email del usuario');
-                Alert.alert('Error', 'No se pudo identificar tu cuenta.');
+                console.error('❌ USUARIO - No se pudo obtener el email del usuario');
+                Alert.alert('Error', 'No se pudo identificar tu cuenta. Por favor inicia sesión nuevamente.');
                 setLoading(false);
                 return;
             }
 
-            // ✅ PASO 3: Obtener información del restaurante desde las constantes
-            const restaurantInfo = getRestaurantInfoByEmail(userEmail);
+            console.log('🔍 USUARIO - Filtrando por email:', userEmail);
 
-            if (!restaurantInfo) {
-                console.error('❌ RESTAURANTE - Usuario no tiene información de restaurante:', userEmail);
-                Alert.alert('Error', 'No tienes permisos para ver pedidos de restaurante.');
-                setLoading(false);
-                return;
-            }
-
-            const { universidadId, restauranteId, nombreRestaurante } = restaurantInfo;
-            console.log('🔍 RESTAURANTE - Filtrando por:', {
-                universidadId,
-                restauranteId,
-                nombreRestaurante,
-                userEmail
-            });
-
-            // ✅ PASO 4: Consultar pedidos filtrados por restaurante
-            console.log('🔗 RESTAURANTE - Consultando AppSync con filtros...');
+            // ✅ PASO 3: Consultar pedidos del usuario
+            console.log('🔗 USUARIO - Consultando AppSync con filtros...');
 
             const { data: pedidosData, errors } = await client.models.Pedido.list({
                 filter: {
-                    and: [
-                        { universidadId: { eq: universidadId } },
-                        { restauranteId: { eq: String(restauranteId) } }
-                    ]
+                    usuarioEmail: { eq: userEmail }
                 },
                 limit: 100
             });
 
             // ✅ LOGS DE DEBUGGING COMPLETOS
-            console.log('🔍 === DEBUGGING COMPLETO ===');
-            console.log('🔍 Errores GraphQL:', errors);
-            console.log('🔍 Datos recibidos:', pedidosData);
-            console.log('🔍 Cantidad de pedidos del restaurante:', pedidosData?.length || 0);
+            console.log(' === DEBUGGING COMPLETO ===');
+            console.log(' Errores GraphQL:', errors);
+            console.log(' Datos recibidos:', pedidosData);
+            console.log('🔍 Cantidad de pedidos del usuario:', pedidosData?.length || 0);
             console.log('🔍 Usuario actual:', userEmail);
-            console.log('🔍 Restaurante del usuario:', restaurantInfo);
 
             if (errors && errors.length > 0) {
-                console.error('❌ RESTAURANTE - Errores GraphQL:', errors);
+                console.error('❌ USUARIO - Errores GraphQL:', errors);
                 Alert.alert('Error', 'No se pudieron cargar los pedidos: ' + errors[0].message);
                 setLoading(false);
                 return;
             }
 
             if (!pedidosData || pedidosData.length === 0) {
-                console.log('⚠️ RESTAURANTE - No hay pedidos para este restaurante');
+                console.log('⚠️ USUARIO - No hay pedidos para este usuario');
                 setPedidos([]);
                 setLoading(false);
                 return;
@@ -125,7 +103,7 @@ const PedidosRestaurante = () => {
             // ✅ LOGS DETALLADOS de cada pedido
             console.log('🔍 === DETALLES DE CADA PEDIDO ===');
             pedidosData.forEach((pedido, index) => {
-                console.log(`🔍 Pedido ${index + 1}:`);
+                console.log(` Pedido ${index + 1}:`);
                 console.log(`   - ID: ${pedido.id}`);
                 console.log(`   - numeroOrden: ${pedido.numeroOrden}`);
                 console.log(`   - restauranteId: ${pedido.restauranteId}`);
@@ -138,7 +116,7 @@ const PedidosRestaurante = () => {
                 console.log(`   ---`);
             });
 
-            // ✅ PASO 5: Procesar pedidos - PARSEAR itemsPedido
+            // ✅ PASO 4: Procesar pedidos - PARSEAR itemsPedido
             const pedidosProcesados = pedidosData.map((pedido: any) => {
                 let itemsProcesados = [];
 
@@ -159,21 +137,20 @@ const PedidosRestaurante = () => {
                 };
             });
 
-            // ✅ PASO 6: Ordenar por fecha más reciente
+            // ✅ PASO 5: Ordenar por fecha más reciente
             const pedidosOrdenados = pedidosProcesados.sort((a: any, b: any) =>
                 new Date(b.fechaPedido).getTime() - new Date(a.fechaPedido).getTime()
             );
 
-            console.log('✅ RESTAURANTE - Pedidos procesados exitosamente:', {
+            console.log('✅ USUARIO - Pedidos procesados exitosamente:', {
                 totalPedidos: pedidosOrdenados.length,
-                pedidosConItems: pedidosOrdenados.filter(p => p.itemsPedido && p.itemsPedido.length > 0).length,
-                restaurante: nombreRestaurante
+                pedidosConItems: pedidosOrdenados.filter(p => p.itemsPedido && p.itemsPedido.length > 0).length
             });
 
             setPedidos(pedidosOrdenados);
 
         } catch (error: any) {
-            console.error('❌ RESTAURANTE - Error inesperado:', error);
+            console.error('❌ USUARIO - Error inesperado:', error);
             Alert.alert('Error', 'Ocurrió un error inesperado: ' + error.message);
         } finally {
             setLoading(false);
@@ -182,9 +159,9 @@ const PedidosRestaurante = () => {
 
     // ✅ Pull to refresh
     const onRefresh = useCallback(async () => {
-        console.log('🔄 RESTAURANTE - Refrescando pedidos...');
+        console.log('🔄 USUARIO - Refrescando pedidos...');
         setRefreshing(true);
-        await cargarPedidosDelRestaurante();
+        await cargarPedidosActivos();
         setRefreshing(false);
     }, []);
 
@@ -204,10 +181,23 @@ const PedidosRestaurante = () => {
     const getEstadoIcon = (estado: string) => {
         switch (estado) {
             case 'pendiente': return <Clock size={16} color="#D97706" />;
-            case 'aceptado':
-            case 'preparando': return <ClipboardList size={16} color="#EA580C" />;
-            case 'listo': return <CheckCircle size={16} color="#059669" />;
+            case 'aceptado': return <CheckCircle size={16} color="#3B82F6" />;
+            case 'preparando': return <Package size={16} color="#EA580C" />;
+            case 'listo': return <Truck size={16} color="#059669" />;
+            case 'cancelado': return <ClipboardList size={16} color="#DC2626" />;
             default: return <Clock size={16} color="#6B7280" />;
+        }
+    };
+
+    const getEstadoDisplayName = (estado: string) => {
+        switch (estado) {
+            case 'pendiente': return 'Pendiente';
+            case 'aceptado': return 'Preparando';
+            case 'preparando': return 'Preparando';
+            case 'listo': return 'Listo';
+            case 'entregado': return 'Entregado';
+            case 'cancelado': return 'Cancelado';
+            default: return estado;
         }
     };
 
@@ -225,226 +215,13 @@ const PedidosRestaurante = () => {
         });
     };
 
-    // ✅ FUNCIÓN PARA ACTUALIZAR ESTADO DEL PEDIDO
-    const actualizarEstadoPedido = async (pedidoId: string, nuevoEstado: string) => {
-        try {
-            setUpdatingPedido(pedidoId);
-            console.log(`🔄 RESTAURANTE - Actualizando pedido ${pedidoId} a estado: ${nuevoEstado}`);
-
-            // Preparar datos de actualización
-            const updateData: any = {
-                id: pedidoId,
-                estado: nuevoEstado
-            };
-
-            // Agregar fechas según el estado
-            const now = new Date().toISOString();
-            switch (nuevoEstado) {
-                case 'aceptado':
-                    updateData.fechaAceptado = now;
-                    break;
-                case 'listo':
-                    updateData.fechaListo = now;
-                    break;
-                case 'entregado':
-                    updateData.fechaEntregado = now;
-                    break;
-            }
-
-            // Actualizar en la base de datos
-            const { data: pedidoActualizado, errors } = await client.models.Pedido.update(updateData);
-
-            if (errors && errors.length > 0) {
-                console.error('❌ RESTAURANTE - Error actualizando pedido:', errors);
-                Alert.alert('Error', 'No se pudo actualizar el pedido: ' + errors[0].message);
-                return false;
-            }
-
-            console.log('✅ RESTAURANTE - Pedido actualizado exitosamente:', pedidoActualizado);
-
-            // Mostrar mensaje de confirmación
-            const mensajes = {
-                'aceptado': 'Pedido aceptado exitosamente',
-                'preparando': 'Pedido en preparación',
-                'listo': 'Pedido listo para entrega',
-                'entregado': 'Pedido entregado y completado'
-            };
-
-            Alert.alert(
-                '✅ Éxito',
-                mensajes[nuevoEstado as keyof typeof mensajes] || 'Estado actualizado',
-                [
-                    {
-                        text: 'OK',
-                        onPress: () => {
-                            // Recargar la lista de pedidos
-                            cargarPedidosDelRestaurante();
-                        }
-                    }
-                ]
-            );
-
-            return true;
-
-        } catch (error: any) {
-            console.error('❌ RESTAURANTE - Error actualizando pedido:', error);
-            Alert.alert('Error', 'Ocurrió un error al actualizar el pedido: ' + error.message);
-            return false;
-        } finally {
-            setUpdatingPedido(null);
-        }
-    };
-
-    // ✅ FUNCIÓN PARA ACEPTAR PEDIDO
-    const aceptarPedido = async (pedidoId: string) => {
-        Alert.alert(
-            'Aceptar Pedido',
-            '¿Estás seguro de que quieres aceptar este pedido?',
-            [
-                { text: 'Cancelar', style: 'cancel' },
-                {
-                    text: 'Aceptar',
-                    onPress: () => actualizarEstadoPedido(pedidoId, 'aceptado')
-                }
-            ]
-        );
-    };
-
-    // ✅ FUNCIÓN PARA RECHAZAR PEDIDO
-    const rechazarPedido = async (pedidoId: string) => {
-        Alert.alert(
-            'Rechazar Pedido',
-            '¿Estás seguro de que quieres rechazar este pedido?',
-            [
-                { text: 'Cancelar', style: 'cancel' },
-                {
-                    text: 'Rechazar',
-                    style: 'destructive',
-                    onPress: () => actualizarEstadoPedido(pedidoId, 'cancelado')
-                }
-            ]
-        );
-    };
-
-    // ✅ FUNCIÓN PARA MARCAR COMO PREPARANDO
-    const prepararPedido = async (pedidoId: string) => {
-        actualizarEstadoPedido(pedidoId, 'preparando');
-    };
-
-    // ✅ FUNCIÓN PARA MARCAR COMO LISTO
-    const marcarListo = async (pedidoId: string) => {
-        actualizarEstadoPedido(pedidoId, 'listo');
-    };
-
-    // ✅ FUNCIÓN PARA MARCAR COMO ENTREGADO
-    const entregarPedido = async (pedidoId: string) => {
-        Alert.alert(
-            'Entregar Pedido',
-            '¿Confirmas que el pedido ha sido entregado al cliente?',
-            [
-                { text: 'Cancelar', style: 'cancel' },
-                {
-                    text: 'Entregar',
-                    onPress: () => actualizarEstadoPedido(pedidoId, 'entregado')
-                }
-            ]
-        );
-    };
-
-    // ✅ FUNCIÓN PARA RENDERIZAR BOTONES SEGÚN ESTADO
-    const renderBotonesAccion = (pedido: any) => {
-        const isUpdating = updatingPedido === pedido.id;
-
-        switch (pedido.estado) {
-            case 'pendiente':
-                return (
-                    <View className="flex-row space-x-3 mt-4">
-                        <TouchableOpacity
-                            onPress={() => aceptarPedido(pedido.id)}
-                            disabled={isUpdating}
-                            className={`flex-1 py-3 px-4 rounded-xl flex-row items-center justify-center ${isUpdating ? 'bg-gray-300' : 'bg-green-500'}`}
-                        >
-                            <CheckCircle size={18} color="white" />
-                            <Text className="text-white font-JakartaBold text-sm ml-2">
-                                {isUpdating ? 'Procesando...' : 'Aceptar'}
-                            </Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                            onPress={() => rechazarPedido(pedido.id)}
-                            disabled={isUpdating}
-                            className={`flex-1 py-3 px-4 rounded-xl flex-row items-center justify-center ${isUpdating ? 'bg-gray-300' : 'bg-red-500'}`}
-                        >
-                            <ClipboardList size={18} color="white" />
-                            <Text className="text-white font-JakartaBold text-sm ml-2">
-                                {isUpdating ? 'Procesando...' : 'Rechazar'}
-                            </Text>
-                        </TouchableOpacity>
-                    </View>
-                );
-
-            case 'aceptado':
-                return (
-                    <TouchableOpacity
-                        onPress={() => prepararPedido(pedido.id)}
-                        disabled={isUpdating}
-                        className={`mt-4 py-3 px-4 rounded-xl flex-row items-center justify-center ${isUpdating ? 'bg-gray-300' : 'bg-orange-500'}`}
-                    >
-                        <ClipboardList size={18} color="white" />
-                        <Text className="text-white font-JakartaBold text-sm ml-2">
-                            {isUpdating ? 'Procesando...' : 'Comenzar Preparación'}
-                        </Text>
-                    </TouchableOpacity>
-                );
-
-            case 'preparando':
-                return (
-                    <TouchableOpacity
-                        onPress={() => marcarListo(pedido.id)}
-                        disabled={isUpdating}
-                        className={`mt-4 py-3 px-4 rounded-xl flex-row items-center justify-center ${isUpdating ? 'bg-gray-300' : 'bg-green-500'}`}
-                    >
-                        <CheckCircle size={18} color="white" />
-                        <Text className="text-white font-JakartaBold text-sm ml-2">
-                            {isUpdating ? 'Procesando...' : 'Pedido Listo'}
-                        </Text>
-                    </TouchableOpacity>
-                );
-
-            case 'listo':
-                return (
-                    <TouchableOpacity
-                        onPress={() => entregarPedido(pedido.id)}
-                        disabled={isUpdating}
-                        className={`mt-4 py-3 px-4 rounded-xl flex-row items-center justify-center ${isUpdating ? 'bg-gray-300' : 'bg-blue-500'}`}
-                    >
-                        <CheckCircle size={18} color="white" />
-                        <Text className="text-white font-JakartaBold text-sm ml-2">
-                            {isUpdating ? 'Procesando...' : 'Confirmar Entrega'}
-                        </Text>
-                    </TouchableOpacity>
-                );
-
-            default:
-                return null;
-        }
-    };
-
-    // ✅ Obtener información del restaurante para mostrar en el header
-    const getRestaurantInfo = () => {
-        const userEmail = user?.email;
-        if (!userEmail) return null;
-        return getRestaurantInfoByEmail(userEmail);
-    };
-
-    const restaurantInfo = getRestaurantInfo();
-
     return (
         <SafeAreaView className="flex-1 bg-white">
-            {/* Header actualizado */}
+            {/* Header */}
             <View className="px-5 py-6 border-b border-gray-200">
                 <View className="flex-row items-center justify-between mb-4">
                     <TouchableOpacity
-                        onPress={() => router.push("/(restaurant)/(tabs)/home")}
+                        onPress={() => router.push("/(root)/(tabs)/home")}
                         className="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center"
                     >
                         <Home size={20} color="#132e3c" />
@@ -452,7 +229,7 @@ const PedidosRestaurante = () => {
                     <View className="flex-1 items-center">
                         <Text className="text-[#132e3c] text-xl font-JakartaBold">Mis Pedidos</Text>
                         <Text className="text-gray-600 text-sm font-JakartaMedium">
-                            {restaurantInfo?.nombreRestaurante || 'Restaurante'}
+                            Estado de tus pedidos
                         </Text>
                     </View>
                     <TouchableOpacity
@@ -463,16 +240,14 @@ const PedidosRestaurante = () => {
                     </TouchableOpacity>
                 </View>
 
-                {/* Contador actualizado */}
+                {/* Contador */}
                 <View className="bg-blue-50 rounded-xl p-4">
                     <Text className="text-blue-800 font-JakartaBold text-lg text-center">
-                        📋 Pedidos de mi restaurante: {pedidos.length}
+                        📋 Mis pedidos activos: {pedidos.length}
                     </Text>
-                    {restaurantInfo && (
-                        <Text className="text-blue-600 font-JakartaMedium text-sm text-center mt-1">
-                            {restaurantInfo.nombreRestaurante} - {restaurantInfo.nombreUniversidad}
-                        </Text>
-                    )}
+                    <Text className="text-blue-600 font-JakartaMedium text-sm text-center mt-1">
+                        {user?.email || 'Usuario'}
+                    </Text>
                 </View>
             </View>
 
@@ -487,7 +262,7 @@ const PedidosRestaurante = () => {
                 {loading ? (
                     <View className="flex-1 items-center justify-center py-20">
                         <Text className="text-[#132e3c] text-lg font-JakartaBold">
-                            Cargando pedidos de tu restaurante...
+                            Cargando tus pedidos...
                         </Text>
                         <Text className="text-gray-600 text-sm font-JakartaMedium mt-2">
                             Consultando base de datos...
@@ -522,8 +297,8 @@ const PedidosRestaurante = () => {
                                     </View>
                                     <View className={`px-3 py-1 rounded-full border flex-row items-center ${getEstadoColor(pedido.estado)}`}>
                                         {getEstadoIcon(pedido.estado)}
-                                        <Text className="font-JakartaBold text-xs ml-1 capitalize">
-                                            {pedido.estado}
+                                        <Text className="font-JakartaBold text-xs ml-1">
+                                            {getEstadoDisplayName(pedido.estado)}
                                         </Text>
                                     </View>
                                 </View>
@@ -531,7 +306,10 @@ const PedidosRestaurante = () => {
                                 {/* Información básica */}
                                 <View className="mb-3 bg-gray-50 rounded-lg p-3">
                                     <Text className="text-gray-600 font-JakartaMedium text-sm">
-                                        👤 Cliente: <Text className="font-JakartaBold">{pedido.usuarioEmail}</Text>
+                                        🏪 Restaurante ID: <Text className="font-JakartaBold">{pedido.restauranteId}</Text>
+                                    </Text>
+                                    <Text className="text-gray-600 font-JakartaMedium text-sm">
+                                        🏫 Universidad ID: <Text className="font-JakartaBold">{pedido.universidadId}</Text>
                                     </Text>
                                     <Text className="text-gray-600 font-JakartaMedium text-sm">
                                         💰 Total: <Text className="font-JakartaBold">{formatearPrecio(pedido.total)}</Text>
@@ -541,7 +319,7 @@ const PedidosRestaurante = () => {
                                 {/* Items del pedido */}
                                 <View className="mb-3">
                                     <Text className="text-[#132e3c] font-JakartaBold text-sm mb-2">
-                                        📋 Productos ({pedido.itemsPedido?.length || 0}):
+                                        Productos ({pedido.itemsPedido?.length || 0}):
                                     </Text>
 
                                     {pedido.itemsPedido && Array.isArray(pedido.itemsPedido) && pedido.itemsPedido.length > 0 ? (
@@ -566,7 +344,7 @@ const PedidosRestaurante = () => {
                                                 {/* Comentarios si existen */}
                                                 {item.comentarios && (
                                                     <Text className="text-purple-600 font-JakartaMedium text-xs italic mt-1">
-                                                        💬 "{item.comentarios}"
+                                                        "{item.comentarios}"
                                                     </Text>
                                                 )}
                                             </View>
@@ -595,9 +373,6 @@ const PedidosRestaurante = () => {
                                     </View>
                                 )}
 
-                                {/* Botones de acción según el estado */}
-                                {renderBotonesAccion(pedido)}
-
                                 {/* Información de debug */}
                                 {__DEV__ && (
                                     <View className="mt-3 p-2 bg-gray-100 rounded-lg">
@@ -618,10 +393,10 @@ const PedidosRestaurante = () => {
                         {/* Información del sistema */}
                         <View className="bg-green-50 rounded-xl p-4 mt-4">
                             <Text className="text-green-800 font-JakartaBold text-sm mb-2">
-                                ✅ Pedidos filtrados correctamente
+                                ✅ Pedidos cargados correctamente
                             </Text>
                             <Text className="text-green-700 font-JakartaMedium text-xs">
-                                Se encontraron {pedidos.length} pedidos para tu restaurante. Solo se muestran los pedidos de {restaurantInfo?.nombreRestaurante}.
+                                Se encontraron {pedidos.length} pedidos para tu cuenta. Los pedidos entregados permanecen visibles.
                             </Text>
                         </View>
                     </>
@@ -629,17 +404,17 @@ const PedidosRestaurante = () => {
                     <View className="flex-1 justify-center items-center py-20">
                         <Text className="text-gray-400 text-6xl mb-4">📋</Text>
                         <Text className="text-[#132e3c] text-xl font-JakartaBold text-center mb-2">
-                            No hay pedidos para tu restaurante
+                            No tienes pedidos activos
                         </Text>
                         <Text className="text-gray-500 font-JakartaMedium text-center mb-6">
-                            Los estudiantes pueden hacer pedidos desde la app para verlos aquí
+                            Realiza un pedido desde el menú de restaurantes para verlo aquí
                         </Text>
                         <TouchableOpacity
-                            onPress={onRefresh}
+                            onPress={() => router.push("/(root)/(tabs)/home")}
                             className="bg-[#132e3c] px-6 py-3 rounded-xl"
                         >
                             <Text className="text-white font-JakartaBold">
-                                🔄 Recargar
+                                🏠 Ir al Inicio
                             </Text>
                         </TouchableOpacity>
                     </View>
@@ -652,4 +427,4 @@ const PedidosRestaurante = () => {
     );
 };
 
-export default PedidosRestaurante;
+export default PedidosActivos; 

@@ -1,6 +1,6 @@
 import { Stack, Tabs } from "expo-router";
 import { Text, View } from "react-native";
-import { Home, Clock, User } from "lucide-react-native"
+import { Home, Clock, User, Package } from "lucide-react-native"
 
 const Layout = () => {
   return (
@@ -35,6 +35,16 @@ const Layout = () => {
                   title: 'Menú Principal',
                   tabBarIcon: ({ color, size }) => (
                       <Home color={color} size={size || 24} />
+                  ),
+              }}
+          />
+
+          <Tabs.Screen
+              name="pedidosActivos"
+              options={{
+                  title: 'Mis Pedidos',
+                  tabBarIcon: ({ color, size }) => (
+                      <Package color={color} size={size || 24} />
                   ),
               }}
           />
