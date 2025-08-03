@@ -1,13 +1,13 @@
-import { Text, View, TouchableOpacity, ScrollView, RefreshControl, Alert } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { router } from "expo-router";
-import { useAuth } from "@/hooks/useAuth";
-import { generateClient } from 'aws-amplify/data';
 import type { Schema } from '@/amplify/data/resource';
-import { getCurrentUser, fetchAuthSession } from 'aws-amplify/auth';
-import { useState, useCallback } from "react";
+import { useAuth } from "@/hooks/useAuth";
 import { useFocusEffect } from '@react-navigation/native';
-import { ClipboardList, Clock, CheckCircle, Home, RefreshCw } from "lucide-react-native";
+import { fetchAuthSession } from 'aws-amplify/auth';
+import { generateClient } from 'aws-amplify/data';
+import { router } from "expo-router";
+import { CheckCircle, ClipboardList, Clock, Home, RefreshCw } from "lucide-react-native";
+import { useCallback, useState } from "react";
+import { Alert, RefreshControl, ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 // ✅ Cliente GraphQL tipado para producción
 const client = generateClient<Schema>();
@@ -23,16 +23,16 @@ const PedidosRestaurante = () => {
     useFocusEffect(
         useCallback(() => {
             console.log('📱 RESTAURANTE - Pantalla pedidos enfocada, cargando pedidos...');
-            cargarTodosLosPedidos();
+            cargarPedidosDelRestaurante();
         }, [])
     );
 
-    // ✅ FUNCIÓN SIMPLIFICADA: Cargar TODOS los pedidos
-    const cargarTodosLosPedidos = async () => {
+    // ✅ FUNCIÓN ACTUALIZADA: Cargar solo los pedidos del restaurante del usuario
+    const cargarPedidosDelRestaurante = async () => {
         try {
-            console.log('📋 RESTAURANTE - Cargando TODOS los pedidos...');
+            console.log('📋 RESTAURANTE - Cargando pedidos del restaurante...');
 
-            // ✅ PASO 1: Verificar autenticación básica
+            // ✅ PASO 1: Verificar autenticación y obtener info del restaurante
             let session;
             try {
                 session = await fetchAuthSession();
@@ -47,18 +47,40 @@ const PedidosRestaurante = () => {
                 return;
             }
 
-            // ✅ PASO 2: Consultar TODOS los pedidos sin filtros
-            console.log('🔗 RESTAURANTE - Consultando AppSync sin filtros...');
+            // ✅ PASO 2: Verificar que el usuario tenga información de restaurante
+            if (!user?.restaurantInfo) {
+                console.error('❌ RESTAURANTE - Usuario no tiene información de restaurante');
+                Alert.alert('Error', 'No tienes permisos para ver pedidos de restaurante.');
+                setLoading(false);
+                return;
+            }
+
+            const { universidadId, restauranteId, nombreRestaurante } = user.restaurantInfo;
+            console.log('🔍 RESTAURANTE - Filtrando por:', {
+                universidadId,
+                restauranteId,
+                nombreRestaurante,
+                userEmail: user.email
+            });
+
+            // ✅ PASO 3: Consultar pedidos filtrados por restaurante
+            console.log('🔗 RESTAURANTE - Consultando AppSync con filtros...');
 
             const { data: pedidosData, errors } = await client.models.Pedido.list({
-                limit: 100 // Sin filtros, traer todos
+                filter: {
+                    and: [
+                        { universidadId: { eq: universidadId } },
+                        { restauranteId: { eq: String(restauranteId) } }
+                    ]
+                },
+                limit: 100
             });
 
             // ✅ LOGS DE DEBUGGING COMPLETOS
             console.log('🔍 === DEBUGGING COMPLETO ===');
             console.log('🔍 Errores GraphQL:', errors);
             console.log('🔍 Datos recibidos:', pedidosData);
-            console.log('🔍 Cantidad total de pedidos:', pedidosData?.length || 0);
+            console.log('🔍 Cantidad de pedidos del restaurante:', pedidosData?.length || 0);
             console.log('🔍 Usuario actual:', user?.email);
             console.log('🔍 Restaurante del usuario:', user?.restaurantInfo);
 
@@ -70,7 +92,7 @@ const PedidosRestaurante = () => {
             }
 
             if (!pedidosData || pedidosData.length === 0) {
-                console.log('⚠️ RESTAURANTE - No hay pedidos en la base de datos');
+                console.log('⚠️ RESTAURANTE - No hay pedidos para este restaurante');
                 setPedidos([]);
                 setLoading(false);
                 return;
@@ -83,19 +105,20 @@ const PedidosRestaurante = () => {
                 console.log(`   - ID: ${pedido.id}`);
                 console.log(`   - numeroOrden: ${pedido.numeroOrden}`);
                 console.log(`   - restauranteId: ${pedido.restauranteId}`);
+                console.log(`   - universidadId: ${pedido.universidadId}`);
                 console.log(`   - usuarioEmail: ${pedido.usuarioEmail}`);
                 console.log(`   - estado: ${pedido.estado}`);
                 console.log(`   - total: ${pedido.total}`);
                 console.log(`   - fechaPedido: ${pedido.fechaPedido}`);
                 console.log(`   - itemsPedido tipo: ${typeof pedido.itemsPedido}`);
                 console.log(`   - itemsPedido muestra: ${typeof pedido.itemsPedido === 'string'
-                        ? pedido.itemsPedido.substring(0, 50) + '...'
-                        : 'No es string'
+                    ? pedido.itemsPedido.substring(0, 50) + '...'
+                    : 'No es string'
                     }`);
                 console.log(`   ---`);
             });
 
-            // ✅ PASO 3: Procesar pedidos - PARSEAR itemsPedido
+            // ✅ PASO 4: Procesar pedidos - PARSEAR itemsPedido
             const pedidosProcesados = pedidosData.map((pedido: any) => {
                 let itemsProcesados = [];
 
@@ -116,14 +139,15 @@ const PedidosRestaurante = () => {
                 };
             });
 
-            // ✅ PASO 4: Ordenar por fecha más reciente
+            // ✅ PASO 5: Ordenar por fecha más reciente
             const pedidosOrdenados = pedidosProcesados.sort((a: any, b: any) =>
                 new Date(b.fechaPedido).getTime() - new Date(a.fechaPedido).getTime()
             );
 
             console.log('✅ RESTAURANTE - Pedidos procesados exitosamente:', {
                 totalPedidos: pedidosOrdenados.length,
-                pedidosConItems: pedidosOrdenados.filter(p => p.itemsPedido && p.itemsPedido.length > 0).length
+                pedidosConItems: pedidosOrdenados.filter(p => p.itemsPedido && p.itemsPedido.length > 0).length,
+                restaurante: nombreRestaurante
             });
 
             setPedidos(pedidosOrdenados);
@@ -140,7 +164,7 @@ const PedidosRestaurante = () => {
     const onRefresh = useCallback(async () => {
         console.log('🔄 RESTAURANTE - Refrescando pedidos...');
         setRefreshing(true);
-        await cargarTodosLosPedidos();
+        await cargarPedidosDelRestaurante();
         setRefreshing(false);
     }, []);
 
@@ -183,7 +207,7 @@ const PedidosRestaurante = () => {
 
     return (
         <SafeAreaView className="flex-1 bg-white">
-            {/* Header simplificado */}
+            {/* Header actualizado */}
             <View className="px-5 py-6 border-b border-gray-200">
                 <View className="flex-row items-center justify-between mb-4">
                     <TouchableOpacity
@@ -193,9 +217,9 @@ const PedidosRestaurante = () => {
                         <Home size={20} color="#132e3c" />
                     </TouchableOpacity>
                     <View className="flex-1 items-center">
-                        <Text className="text-[#132e3c] text-xl font-JakartaBold">Todos los Pedidos</Text>
+                        <Text className="text-[#132e3c] text-xl font-JakartaBold">Mis Pedidos</Text>
                         <Text className="text-gray-600 text-sm font-JakartaMedium">
-                            Debug Mode - Mostrando todos
+                            {user?.restaurantInfo?.nombreRestaurante || 'Restaurante'}
                         </Text>
                     </View>
                     <TouchableOpacity
@@ -206,14 +230,14 @@ const PedidosRestaurante = () => {
                     </TouchableOpacity>
                 </View>
 
-                {/* Contador simple */}
+                {/* Contador actualizado */}
                 <View className="bg-blue-50 rounded-xl p-4">
                     <Text className="text-blue-800 font-JakartaBold text-lg text-center">
-                        📋 Total de pedidos encontrados: {pedidos.length}
+                        📋 Pedidos de mi restaurante: {pedidos.length}
                     </Text>
                     {user?.restaurantInfo && (
                         <Text className="text-blue-600 font-JakartaMedium text-sm text-center mt-1">
-                            Tu restaurante: {user.restaurantInfo.nombreRestaurante} (ID: {user.restaurantInfo.restauranteId})
+                            {user.restaurantInfo.nombreRestaurante} - {user.restaurantInfo.nombreUniversidad}
                         </Text>
                     )}
                 </View>
@@ -230,7 +254,7 @@ const PedidosRestaurante = () => {
                 {loading ? (
                     <View className="flex-1 items-center justify-center py-20">
                         <Text className="text-[#132e3c] text-lg font-JakartaBold">
-                            Cargando todos los pedidos...
+                            Cargando pedidos de tu restaurante...
                         </Text>
                         <Text className="text-gray-600 text-sm font-JakartaMedium mt-2">
                             Consultando base de datos...
@@ -275,12 +299,6 @@ const PedidosRestaurante = () => {
                                 <View className="mb-3 bg-gray-50 rounded-lg p-3">
                                     <Text className="text-gray-600 font-JakartaMedium text-sm">
                                         👤 Cliente: <Text className="font-JakartaBold">{pedido.usuarioEmail}</Text>
-                                    </Text>
-                                    <Text className="text-gray-600 font-JakartaMedium text-sm">
-                                        🏪 Restaurante ID: <Text className="font-JakartaBold">{pedido.restauranteId}</Text>
-                                    </Text>
-                                    <Text className="text-gray-600 font-JakartaMedium text-sm">
-                                        🏫 Universidad ID: <Text className="font-JakartaBold">{pedido.universidadId}</Text>
                                     </Text>
                                     <Text className="text-gray-600 font-JakartaMedium text-sm">
                                         💰 Total: <Text className="font-JakartaBold">{formatearPrecio(pedido.total)}</Text>
@@ -364,10 +382,10 @@ const PedidosRestaurante = () => {
                         {/* Información del sistema */}
                         <View className="bg-green-50 rounded-xl p-4 mt-4">
                             <Text className="text-green-800 font-JakartaBold text-sm mb-2">
-                                ✅ Conexión exitosa con AppSync + DynamoDB
+                                ✅ Pedidos filtrados correctamente
                             </Text>
                             <Text className="text-green-700 font-JakartaMedium text-xs">
-                                Se encontraron {pedidos.length} pedidos en total. Revisa los logs de la consola para más detalles.
+                                Se encontraron {pedidos.length} pedidos para tu restaurante. Solo se muestran los pedidos de {user?.restaurantInfo?.nombreRestaurante}.
                             </Text>
                         </View>
                     </>
@@ -375,10 +393,10 @@ const PedidosRestaurante = () => {
                     <View className="flex-1 justify-center items-center py-20">
                         <Text className="text-gray-400 text-6xl mb-4">📋</Text>
                         <Text className="text-[#132e3c] text-xl font-JakartaBold text-center mb-2">
-                            No hay pedidos en la base de datos
+                            No hay pedidos para tu restaurante
                         </Text>
                         <Text className="text-gray-500 font-JakartaMedium text-center mb-6">
-                            Crea un pedido desde la app de estudiante para verlo aquí
+                            Los estudiantes pueden hacer pedidos desde la app para verlos aquí
                         </Text>
                         <TouchableOpacity
                             onPress={onRefresh}

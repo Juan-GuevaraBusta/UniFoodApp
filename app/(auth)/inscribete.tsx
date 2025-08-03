@@ -119,7 +119,7 @@ const inscribete = () => {
           </TouchableOpacity>
 
           <Text className="text-[#132e3c] text-3xl font-JakartaExtraBold mb-2">
-            ¡Únete a UniFood!
+            ¡Únete a UniFud!
           </Text>
           <Text className="text-gray-600 text-base font-JakartaMedium">
             Crea tu cuenta para acceder a la plataforma
