@@ -18,21 +18,14 @@ const PedidosRestaurante = () => {
     const [pedidos, setPedidos] = useState<any[]>([]);
     const [refreshing, setRefreshing] = useState(false);
     const [loading, setLoading] = useState(true);
-
-    // ✅ Cargar pedidos al enfocar la pantalla
-    useFocusEffect(
-        useCallback(() => {
-            console.log('📱 RESTAURANTE - Pantalla pedidos enfocada, cargando pedidos...');
-            cargarPedidosDelRestaurante();
-        }, [])
-    );
+    const [updatingPedido, setUpdatingPedido] = useState<string | null>(null);
 
     // ✅ FUNCIÓN ACTUALIZADA: Cargar solo los pedidos del restaurante del usuario
     const cargarPedidosDelRestaurante = async () => {
         try {
-            console.log('📋 RESTAURANTE - Cargando pedidos del restaurante...');
+            console.log('📱 RESTAURANTE - Cargando pedidos del restaurante...');
 
-            // ✅ PASO 1: Verificar autenticación y obtener info del restaurante
+            // ✅ PASO 1: Verificar autenticación básica
             let session;
             try {
                 session = await fetchAuthSession();
@@ -47,23 +40,35 @@ const PedidosRestaurante = () => {
                 return;
             }
 
-            // ✅ PASO 2: Verificar que el usuario tenga información de restaurante
-            if (!user?.restaurantInfo) {
-                console.error('❌ RESTAURANTE - Usuario no tiene información de restaurante');
+            // ✅ PASO 2: Obtener información del restaurante del usuario
+            const userEmail = user?.email;
+            if (!userEmail) {
+                console.error('❌ RESTAURANTE - No se pudo obtener el email del usuario');
+                Alert.alert('Error', 'No se pudo identificar tu cuenta.');
+                setLoading(false);
+                return;
+            }
+
+            // ✅ PASO 3: Obtener información del restaurante desde las constantes
+            const { getRestaurantInfoByEmail } = await import('@/constants/userRoles');
+            const restaurantInfo = getRestaurantInfoByEmail(userEmail);
+
+            if (!restaurantInfo) {
+                console.error('❌ RESTAURANTE - Usuario no tiene información de restaurante:', userEmail);
                 Alert.alert('Error', 'No tienes permisos para ver pedidos de restaurante.');
                 setLoading(false);
                 return;
             }
 
-            const { universidadId, restauranteId, nombreRestaurante } = user.restaurantInfo;
+            const { universidadId, restauranteId, nombreRestaurante } = restaurantInfo;
             console.log('🔍 RESTAURANTE - Filtrando por:', {
                 universidadId,
                 restauranteId,
                 nombreRestaurante,
-                userEmail: user.email
+                userEmail
             });
 
-            // ✅ PASO 3: Consultar pedidos filtrados por restaurante
+            // ✅ PASO 4: Consultar pedidos filtrados por restaurante
             console.log('🔗 RESTAURANTE - Consultando AppSync con filtros...');
 
             const { data: pedidosData, errors } = await client.models.Pedido.list({
@@ -81,8 +86,8 @@ const PedidosRestaurante = () => {
             console.log('🔍 Errores GraphQL:', errors);
             console.log('🔍 Datos recibidos:', pedidosData);
             console.log('🔍 Cantidad de pedidos del restaurante:', pedidosData?.length || 0);
-            console.log('🔍 Usuario actual:', user?.email);
-            console.log('🔍 Restaurante del usuario:', user?.restaurantInfo);
+            console.log('🔍 Usuario actual:', userEmail);
+            console.log('🔍 Restaurante del usuario:', restaurantInfo);
 
             if (errors && errors.length > 0) {
                 console.error('❌ RESTAURANTE - Errores GraphQL:', errors);
@@ -118,7 +123,7 @@ const PedidosRestaurante = () => {
                 console.log(`   ---`);
             });
 
-            // ✅ PASO 4: Procesar pedidos - PARSEAR itemsPedido
+            // ✅ PASO 5: Procesar pedidos - PARSEAR itemsPedido
             const pedidosProcesados = pedidosData.map((pedido: any) => {
                 let itemsProcesados = [];
 
@@ -139,7 +144,7 @@ const PedidosRestaurante = () => {
                 };
             });
 
-            // ✅ PASO 5: Ordenar por fecha más reciente
+            // ✅ PASO 6: Ordenar por fecha más reciente
             const pedidosOrdenados = pedidosProcesados.sort((a: any, b: any) =>
                 new Date(b.fechaPedido).getTime() - new Date(a.fechaPedido).getTime()
             );
@@ -159,6 +164,14 @@ const PedidosRestaurante = () => {
             setLoading(false);
         }
     };
+
+    // ✅ Cargar pedidos al enfocar la pantalla
+    useFocusEffect(
+        useCallback(() => {
+            console.log('📱 RESTAURANTE - Pantalla pedidos enfocada, cargando pedidos...');
+            cargarPedidosDelRestaurante();
+        }, [])
+    );
 
     // ✅ Pull to refresh
     const onRefresh = useCallback(async () => {
@@ -205,6 +218,230 @@ const PedidosRestaurante = () => {
         });
     };
 
+    // ✅ FUNCIÓN PARA ACTUALIZAR ESTADO DEL PEDIDO
+    const actualizarEstadoPedido = async (pedidoId: string, nuevoEstado: string) => {
+        try {
+            setUpdatingPedido(pedidoId);
+            console.log(`🔄 RESTAURANTE - Actualizando pedido ${pedidoId} a estado: ${nuevoEstado}`);
+
+            // Preparar datos de actualización
+            const updateData: any = {
+                id: pedidoId,
+                estado: nuevoEstado
+            };
+
+            // Agregar fechas según el estado
+            const now = new Date().toISOString();
+            switch (nuevoEstado) {
+                case 'aceptado':
+                    updateData.fechaAceptado = now;
+                    break;
+                case 'listo':
+                    updateData.fechaListo = now;
+                    break;
+                case 'entregado':
+                    updateData.fechaEntregado = now;
+                    break;
+            }
+
+            // Actualizar en la base de datos
+            const { data: pedidoActualizado, errors } = await client.models.Pedido.update(updateData);
+
+            if (errors && errors.length > 0) {
+                console.error('❌ RESTAURANTE - Error actualizando pedido:', errors);
+                Alert.alert('Error', 'No se pudo actualizar el pedido: ' + errors[0].message);
+                return false;
+            }
+
+            console.log('✅ RESTAURANTE - Pedido actualizado exitosamente:', pedidoActualizado);
+
+            // Mostrar mensaje de confirmación
+            const mensajes = {
+                'aceptado': 'Pedido aceptado exitosamente',
+                'preparando': 'Pedido en preparación',
+                'listo': 'Pedido listo para entrega',
+                'entregado': 'Pedido entregado y completado'
+            };
+
+            Alert.alert(
+                '✅ Éxito',
+                mensajes[nuevoEstado as keyof typeof mensajes] || 'Estado actualizado',
+                [
+                    {
+                        text: 'OK',
+                        onPress: () => {
+                            // Recargar la lista de pedidos
+                            cargarPedidosDelRestaurante();
+                        }
+                    }
+                ]
+            );
+
+            return true;
+
+        } catch (error: any) {
+            console.error('❌ RESTAURANTE - Error actualizando pedido:', error);
+            Alert.alert('Error', 'Ocurrió un error al actualizar el pedido: ' + error.message);
+            return false;
+        } finally {
+            setUpdatingPedido(null);
+        }
+    };
+
+    // ✅ FUNCIÓN PARA ACEPTAR PEDIDO
+    const aceptarPedido = async (pedidoId: string) => {
+        Alert.alert(
+            'Aceptar Pedido',
+            '¿Estás seguro de que quieres aceptar este pedido?',
+            [
+                { text: 'Cancelar', style: 'cancel' },
+                {
+                    text: 'Aceptar',
+                    onPress: () => actualizarEstadoPedido(pedidoId, 'aceptado')
+                }
+            ]
+        );
+    };
+
+    // ✅ FUNCIÓN PARA RECHAZAR PEDIDO
+    const rechazarPedido = async (pedidoId: string) => {
+        Alert.alert(
+            'Rechazar Pedido',
+            '¿Estás seguro de que quieres rechazar este pedido?',
+            [
+                { text: 'Cancelar', style: 'cancel' },
+                {
+                    text: 'Rechazar',
+                    style: 'destructive',
+                    onPress: () => actualizarEstadoPedido(pedidoId, 'cancelado')
+                }
+            ]
+        );
+    };
+
+    // ✅ FUNCIÓN PARA MARCAR COMO PREPARANDO
+    const prepararPedido = async (pedidoId: string) => {
+        actualizarEstadoPedido(pedidoId, 'preparando');
+    };
+
+    // ✅ FUNCIÓN PARA MARCAR COMO LISTO
+    const marcarListo = async (pedidoId: string) => {
+        actualizarEstadoPedido(pedidoId, 'listo');
+    };
+
+    // ✅ FUNCIÓN PARA MARCAR COMO ENTREGADO
+    const entregarPedido = async (pedidoId: string) => {
+        Alert.alert(
+            'Entregar Pedido',
+            '¿Confirmas que el pedido ha sido entregado al cliente?',
+            [
+                { text: 'Cancelar', style: 'cancel' },
+                {
+                    text: 'Entregar',
+                    onPress: () => actualizarEstadoPedido(pedidoId, 'entregado')
+                }
+            ]
+        );
+    };
+
+    // ✅ FUNCIÓN PARA RENDERIZAR BOTONES SEGÚN ESTADO
+    const renderBotonesAccion = (pedido: any) => {
+        const isUpdating = updatingPedido === pedido.id;
+
+        switch (pedido.estado) {
+            case 'pendiente':
+                return (
+                    <View className="flex-row space-x-3 mt-4">
+                        <TouchableOpacity
+                            onPress={() => aceptarPedido(pedido.id)}
+                            disabled={isUpdating}
+                            className={`flex-1 py-3 px-4 rounded-xl flex-row items-center justify-center ${
+                                isUpdating ? 'bg-gray-300' : 'bg-green-500'
+                            }`}
+                        >
+                            <CheckCircle size={18} color="white" />
+                            <Text className="text-white font-JakartaBold text-sm ml-2">
+                                {isUpdating ? 'Procesando...' : 'Aceptar'}
+                            </Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            onPress={() => rechazarPedido(pedido.id)}
+                            disabled={isUpdating}
+                            className={`flex-1 py-3 px-4 rounded-xl flex-row items-center justify-center ${
+                                isUpdating ? 'bg-gray-300' : 'bg-red-500'
+                            }`}
+                        >
+                            <ClipboardList size={18} color="white" />
+                            <Text className="text-white font-JakartaBold text-sm ml-2">
+                                {isUpdating ? 'Procesando...' : 'Rechazar'}
+                            </Text>
+                        </TouchableOpacity>
+                    </View>
+                );
+
+            case 'aceptado':
+                return (
+                    <TouchableOpacity
+                        onPress={() => prepararPedido(pedido.id)}
+                        disabled={isUpdating}
+                        className={`mt-4 py-3 px-4 rounded-xl flex-row items-center justify-center ${
+                            isUpdating ? 'bg-gray-300' : 'bg-orange-500'
+                        }`}
+                    >
+                        <ClipboardList size={18} color="white" />
+                        <Text className="text-white font-JakartaBold text-sm ml-2">
+                            {isUpdating ? 'Procesando...' : 'Comenzar Preparación'}
+                        </Text>
+                    </TouchableOpacity>
+                );
+
+            case 'preparando':
+                return (
+                    <TouchableOpacity
+                        onPress={() => marcarListo(pedido.id)}
+                        disabled={isUpdating}
+                        className={`mt-4 py-3 px-4 rounded-xl flex-row items-center justify-center ${
+                            isUpdating ? 'bg-gray-300' : 'bg-green-500'
+                        }`}
+                    >
+                        <CheckCircle size={18} color="white" />
+                        <Text className="text-white font-JakartaBold text-sm ml-2">
+                            {isUpdating ? 'Procesando...' : 'Pedido Listo'}
+                        </Text>
+                    </TouchableOpacity>
+                );
+
+            case 'listo':
+                return (
+                    <TouchableOpacity
+                        onPress={() => entregarPedido(pedido.id)}
+                        disabled={isUpdating}
+                        className={`mt-4 py-3 px-4 rounded-xl flex-row items-center justify-center ${
+                            isUpdating ? 'bg-gray-300' : 'bg-blue-500'
+                        }`}
+                    >
+                        <CheckCircle size={18} color="white" />
+                        <Text className="text-white font-JakartaBold text-sm ml-2">
+                            {isUpdating ? 'Procesando...' : 'Confirmar Entrega'}
+                        </Text>
+                    </TouchableOpacity>
+                );
+
+            default:
+                return null;
+        }
+    };
+
+    // ✅ Obtener información del restaurante para mostrar en el header
+    const getRestaurantInfo = () => {
+        const userEmail = user?.email;
+        if (!userEmail) return null;
+        const { getRestaurantInfoByEmail } = require('@/constants/userRoles');
+        return getRestaurantInfoByEmail(userEmail);
+    };
+
+    const restaurantInfo = getRestaurantInfo();
+
     return (
         <SafeAreaView className="flex-1 bg-white">
             {/* Header actualizado */}
@@ -219,7 +456,7 @@ const PedidosRestaurante = () => {
                     <View className="flex-1 items-center">
                         <Text className="text-[#132e3c] text-xl font-JakartaBold">Mis Pedidos</Text>
                         <Text className="text-gray-600 text-sm font-JakartaMedium">
-                            {user?.restaurantInfo?.nombreRestaurante || 'Restaurante'}
+                            {restaurantInfo?.nombreRestaurante || 'Restaurante'}
                         </Text>
                     </View>
                     <TouchableOpacity
@@ -235,9 +472,9 @@ const PedidosRestaurante = () => {
                     <Text className="text-blue-800 font-JakartaBold text-lg text-center">
                         📋 Pedidos de mi restaurante: {pedidos.length}
                     </Text>
-                    {user?.restaurantInfo && (
+                    {restaurantInfo && (
                         <Text className="text-blue-600 font-JakartaMedium text-sm text-center mt-1">
-                            {user.restaurantInfo.nombreRestaurante} - {user.restaurantInfo.nombreUniversidad}
+                            {restaurantInfo.nombreRestaurante} - {restaurantInfo.nombreUniversidad}
                         </Text>
                     )}
                 </View>
@@ -362,6 +599,9 @@ const PedidosRestaurante = () => {
                                     </View>
                                 )}
 
+                                {/* Botones de acción según el estado */}
+                                {renderBotonesAccion(pedido)}
+
                                 {/* Información de debug */}
                                 {__DEV__ && (
                                     <View className="mt-3 p-2 bg-gray-100 rounded-lg">
@@ -385,7 +625,7 @@ const PedidosRestaurante = () => {
                                 ✅ Pedidos filtrados correctamente
                             </Text>
                             <Text className="text-green-700 font-JakartaMedium text-xs">
-                                Se encontraron {pedidos.length} pedidos para tu restaurante. Solo se muestran los pedidos de {user?.restaurantInfo?.nombreRestaurante}.
+                                Se encontraron {pedidos.length} pedidos para tu restaurante. Solo se muestran los pedidos de {restaurantInfo?.nombreRestaurante}.
                             </Text>
                         </View>
                     </>
