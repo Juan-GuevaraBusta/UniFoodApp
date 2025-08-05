@@ -20,6 +20,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.neodigital.unifud",
+      "displayName": "uniFud",
       "buildNumber": "1",
       "splash": {
         "image": "./assets/images/splash.png",
@@ -44,7 +45,9 @@
         "resizeMode": "contain",
         "backgroundColor": "#ffffff"
       },
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": true,
+      "displayName": "uniFud",
+      "versionCode": 1
     },
     "web": {
       "bundler": "metro",
