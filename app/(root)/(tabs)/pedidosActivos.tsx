@@ -4,7 +4,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { fetchAuthSession, getCurrentUser } from 'aws-amplify/auth';
 import { generateClient } from 'aws-amplify/data';
 import { router } from "expo-router";
-import { CheckCircle, ClipboardList, Clock, Home, Package, RefreshCw, Truck } from "lucide-react-native";
+import { CheckCircle, ClipboardList, Clock, Home, RefreshCw } from "lucide-react-native";
 import { useCallback, useState } from "react";
 import { Alert, RefreshControl, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";

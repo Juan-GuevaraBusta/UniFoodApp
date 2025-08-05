@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "UniFood",
-    "slug": "unifood",
+    "name": "UniFud",
+    "slug": "unifud",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/adaptive-icon.png",
@@ -19,7 +19,7 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.neodigital.unifood",
+      "bundleIdentifier": "com.neodigital.unifud",
       "buildNumber": "1",
       "splash": {
         "image": "./assets/images/splash.png",
@@ -34,7 +34,7 @@
       }
     },
     "android": {
-      "package": "com.neodigital.unifood",
+      "package": "com.neodigital.unifud",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
