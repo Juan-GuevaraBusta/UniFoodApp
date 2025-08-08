@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "UniFud",
-    "slug": "unifud",
+    "slug": "unifood",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/adaptive-icon.png",

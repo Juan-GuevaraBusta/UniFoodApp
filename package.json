@@ -6,15 +6,7 @@
     "start": "expo start --no-dev",
     "android": "expo start --android",
     "ios": "expo start --ios",
-    "web": "expo start --web",
-    "setup": "setup-unifood.bat",
-    "setup:ps": "powershell -ExecutionPolicy Bypass -File setup-unifood.ps1",
-    "amplify:sandbox": "npx ampx sandbox",
-    "amplify:deploy": "npx ampx sandbox deploy",
-    "amplify:studio": "npx ampx studio",
-    "amplify:console": "npx ampx console",
-    "amplify:delete": "npx ampx sandbox delete",
-    "amplify:reset": "if exist .amplify rmdir /s /q .amplify && if exist amplify_outputs.json del amplify_outputs.json && npm run amplify:sandbox"
+    "web": "expo start --web"
   },
   "dependencies": {
     "@aws-amplify/react-native": "^1.1.10",
@@ -38,19 +30,12 @@
     "react-native-screens": "~4.11.1",
     "react-native-svg": "15.11.2",
     "react-native-swiper": "^1.6.0",
-    "react-native-web": "^0.20.0",
-    "expo-dev-client": "~5.2.4"
+    "react-native-web": "^0.20.0"
   },
   "devDependencies": {
-    "@aws-amplify/backend": "^1.16.1",
-    "@aws-amplify/backend-cli": "^1.8.0",
     "@babel/core": "^7.25.2",
     "@types/react": "~19.0.10",
-    "aws-cdk-lib": "^2.189.1",
-    "constructs": "^10.4.2",
-    "esbuild": "^0.25.5",
     "tailwindcss": "^3.4.17",
-    "tsx": "^4.20.3",
     "typescript": "^5.8.3"
   },
   "private": true

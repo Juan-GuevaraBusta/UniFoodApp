@@ -1,0 +1,26 @@
+# Amplify development files
+.amplify/
+
+# Development files
+*.log
+*.tsbuildinfo
+.DS_Store
+Thumbs.db
+
+# Node modules (will be installed during build)
+node_modules/
+
+# Git files
+.git/
+.gitignore
+
+# IDE files
+.vscode/
+.idea/
+
+# Temporary files
+*.tmp
+*.temp
+
+# Backup files
+*.backup
