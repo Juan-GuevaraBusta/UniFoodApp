@@ -8,7 +8,7 @@ const schema = a.schema({
       imagen: a.string(),
       restaurantes: a.hasMany('Restaurante', 'universidadId'),
     })
-    .authorization((allow) => [
+    .authorization((allow: any) => [
       allow.guest().to(['read']),
       allow.authenticated().to(['read']),
     ]),
@@ -25,7 +25,7 @@ const schema = a.schema({
       platos: a.hasMany('Plato', 'restauranteId'),
       pedidos: a.hasMany('Pedido', 'restauranteId'),
     })
-    .authorization((allow) => [
+    .authorization((allow: any) => [
       allow.guest().to(['read']),
       allow.authenticated().to(['read']),
     ]),
@@ -42,7 +42,7 @@ const schema = a.schema({
       restaurante: a.belongsTo('Restaurante', 'restauranteId'),
       toppings: a.hasMany('Topping', 'platoId'),
     })
-    .authorization((allow) => [
+    .authorization((allow: any) => [
       allow.guest().to(['read']),
       allow.authenticated().to(['read']),
     ]),
@@ -56,7 +56,7 @@ const schema = a.schema({
       platoId: a.id().required(),
       plato: a.belongsTo('Plato', 'platoId'),
     })
-    .authorization((allow) => [
+    .authorization((allow: any) => [
       allow.guest().to(['read']),
       allow.authenticated().to(['read']),
     ]),
@@ -100,14 +100,14 @@ const schema = a.schema({
       // Índice para consultas eficientes
       restauranteEstado: a.string().required(),
     })
-    .authorization((allow) => [
+    .authorization((allow: any) => [
       // ✅ CORREGIDO: Solo usar authenticated() sin owner()
       allow.authenticated().to(['create', 'read', 'update']),
       // ✅ Los invitados pueden leer para casos específicos
       allow.guest().to(['read']),
     ])
     // ✅ Índices secundarios para consultas eficientes
-    .secondaryIndexes((index) => [
+    .secondaryIndexes((index: any) => [
       index('restauranteEstado').sortKeys(['fechaPedido']), // Para pedidos por restaurante y estado
       index('usuarioEmail').sortKeys(['fechaPedido']), // Para pedidos por usuario
       index('restauranteId').sortKeys(['fechaPedido']), // Para todos los pedidos de un restaurante
