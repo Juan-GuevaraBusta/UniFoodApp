@@ -19,8 +19,8 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.unifud.testflight",
-      "buildNumber": "7",
+      "bundleIdentifier": "dev.unifud.app",
+      "buildNumber": "1",
       "splash": {
         "image": "./assets/images/splash.png",
         "resizeMode": "contain",
@@ -47,7 +47,7 @@
       "runtimeVersion": "1.0.0"
     },
     "android": {
-      "package": "com.unifud.testflight",
+      "package": "dev.unifud.app",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
