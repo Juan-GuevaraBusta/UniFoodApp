@@ -20,7 +20,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.unifud.testflight",
-      "buildNumber": "1",
+      "buildNumber": "7",
       "splash": {
         "image": "./assets/images/splash.png",
         "resizeMode": "contain",
@@ -30,8 +30,21 @@
         "NSAppTransportSecurity": {
           "NSAllowsArbitraryLoads": true
         },
-        "ITSAppUsesNonExemptEncryption": false
-      }
+        "ITSAppUsesNonExemptEncryption": false,
+        "UISupportedInterfaceOrientations": [
+          "UIInterfaceOrientationPortrait",
+          "UIInterfaceOrientationPortraitUpsideDown",
+          "UIInterfaceOrientationLandscapeLeft",
+          "UIInterfaceOrientationLandscapeRight"
+        ],
+        "UISupportedInterfaceOrientations~ipad": [
+          "UIInterfaceOrientationPortrait",
+          "UIInterfaceOrientationPortraitUpsideDown",
+          "UIInterfaceOrientationLandscapeLeft",
+          "UIInterfaceOrientationLandscapeRight"
+        ]
+      },
+      "runtimeVersion": "1.0.0"
     },
     "android": {
       "package": "com.unifud.testflight",
@@ -45,7 +58,10 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "versionCode": 1
+      "versionCode": 1,
+      "runtimeVersion": {
+        "policy": "appVersion"
+      }
     },
     "web": {
       "bundler": "metro",
@@ -68,6 +84,9 @@
       "eas": {
         "projectId": "c7f383b9-61dd-4f26-a658-162157761c08"
       }
+    },
+    "updates": {
+      "url": "https://u.expo.dev/c7f383b9-61dd-4f26-a658-162157761c08"
     }
   }
 }

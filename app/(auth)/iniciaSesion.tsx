@@ -1,11 +1,11 @@
 /* eslint-disable prettier/prettier */
-import { useState } from "react";
-import { Text, View, TextInput, TouchableOpacity, Alert, ScrollView, ActivityIndicator } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { router } from "expo-router";
+import { getRoleDisplayName, getRoleRedirectPath, UserRole } from "@/constants/userRoles";
 import { useAuth } from "@/hooks/useAuth";
-import { getRoleRedirectPath, getRoleDisplayName, UserRole } from "@/constants/userRoles";
-import { Eye, EyeOff, Mail, Lock } from "lucide-react-native";
+import { router } from "expo-router";
+import { Eye, EyeOff, Lock, Mail } from "lucide-react-native";
+import { useState } from "react";
+import { ActivityIndicator, Alert, ScrollView, Text, TextInput, TouchableOpacity, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 const iniciaSesion = () => {
   const [email, setEmail] = useState("");
@@ -120,13 +120,6 @@ const iniciaSesion = () => {
       <ScrollView className="flex-1" keyboardShouldPersistTaps="handled">
         {/* Header */}
         <View className="px-5 py-8">
-          <TouchableOpacity
-            onPress={() => router.back()}
-            className="mb-6"
-          >
-            <Text className="text-[#132e3c] text-lg font-JakartaBold">← Atrás</Text>
-          </TouchableOpacity>
-
           <Text className="text-[#132e3c] text-3xl font-JakartaExtraBold mb-2">
             ¡Hola de nuevo!
           </Text>

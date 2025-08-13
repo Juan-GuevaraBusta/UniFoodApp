@@ -31,7 +31,8 @@
     "react-native-svg": "15.11.2",
     "react-native-swiper": "^1.6.0",
     "react-native-web": "^0.20.0",
-    "expo-dev-client": "~5.2.4"
+    "expo-dev-client": "~5.2.4",
+    "expo-updates": "~0.28.17"
   },
   "devDependencies": {
     "@aws-amplify/backend-cli": "^1.8.0",
