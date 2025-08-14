@@ -4,7 +4,7 @@ import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import { useAuth } from "@/hooks/useAuth";
 import { useState } from "react";
-import { User, LogOut, Mail } from "lucide-react-native";
+import { User, LogOut, Settings, Shield, Mail } from "lucide-react-native";
 
 const Profile = () => {
   const { user, cerrarSesion } = useAuth();
@@ -88,10 +88,30 @@ const Profile = () => {
                 Información de la cuenta
               </Text>
             </View>
-            <Text className="text-gray-600 font-JakartaMedium text-sm">
+            <Text className="text-gray-600 font-JakartaMedium text-sm mb-2">
               Email: {user?.email || 'No disponible'}
             </Text>
+            <Text className="text-gray-600 font-JakartaMedium text-sm">
+              Usuario: {user?.username || 'No disponible'}
+            </Text>
           </View>
+
+          {/* Opciones de configuración */}
+          <TouchableOpacity className="bg-white border border-gray-200 rounded-xl p-4 flex-row items-center">
+            <Settings size={20} color="#132e3c" />
+            <Text className="text-[#132e3c] font-JakartaBold text-base ml-3 flex-1">
+              Configuración
+            </Text>
+            <Text className="text-gray-400">→</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity className="bg-white border border-gray-200 rounded-xl p-4 flex-row items-center">
+            <Shield size={20} color="#132e3c" />
+            <Text className="text-[#132e3c] font-JakartaBold text-base ml-3 flex-1">
+              Privacidad y Seguridad
+            </Text>
+            <Text className="text-gray-400">→</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Información de la app */}

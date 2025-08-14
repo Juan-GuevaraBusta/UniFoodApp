@@ -389,7 +389,15 @@ const PedidosActivos = () => {
                             </View>
                         ))}
 
-
+                        {/* Información del sistema */}
+                        <View className="bg-green-50 rounded-xl p-4 mt-4">
+                            <Text className="text-green-800 font-JakartaBold text-sm mb-2">
+                                ✅ Pedidos cargados correctamente
+                            </Text>
+                            <Text className="text-green-700 font-JakartaMedium text-xs">
+                                Se encontraron {pedidos.length} pedidos para tu cuenta. Los pedidos entregados permanecen visibles.
+                            </Text>
+                        </View>
                     </>
                 ) : (
                     <View className="flex-1 justify-center items-center py-20">
