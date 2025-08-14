@@ -1,6 +1,6 @@
 // hooks/useRestaurantes.ts - VERSIÓN SIMPLIFICADA
 import { restaurantes as restaurantesData } from "@/constants/index";
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useAmplifyData } from './useAmplifyData';
 
 // =============== INTERFACES ===============
@@ -56,44 +56,15 @@ export const useRestaurantes = () => {
         return restaurantesData as Restaurante[];
     }, []);
 
-    // ✅ Cargar disponibilidad automáticamente al inicializar
-    useEffect(() => {
-        const cargarDisponibilidadInicial = async () => {
-            try {
-                const restaurantesIds = restaurantesProcesados.map(r => r.idRestaurante);
-                const promises = restaurantesIds.map(id => obtenerDisponibilidadPlatos(id));
-                await Promise.all(promises);
-            } catch (error) {
-                console.error('Error cargando disponibilidad inicial:', error);
-            }
-        };
+    // ✅ NOTA: La disponibilidad ahora se carga directamente en las pantallas
+    // siguiendo el mismo patrón que los pedidos (useFocusEffect + carga directa)
 
-        cargarDisponibilidadInicial();
-    }, [restaurantesProcesados]);
-
-    // ✅ Restaurantes filtrados con disponibilidad actualizada
+    // ✅ Restaurantes filtrados (sin disponibilidad - se carga directamente en pantallas)
     const restaurantesFiltrados = useMemo(() => {
-        const restaurantesFiltradosPorUniversidad = restaurantesProcesados.filter(
+        return restaurantesProcesados.filter(
             restaurante => restaurante.idUniversidad === universidadSeleccionada
         );
-
-        // ✅ Aplicar disponibilidad del backend a cada plato
-        const restaurantesActualizados = restaurantesFiltradosPorUniversidad.map(restaurante => {
-            const menuActualizado = restaurante.menu.map(plato => {
-                // ✅ Prioridad: Backend > Original
-                const disponibleBackend = disponibilidadLocal[restaurante.idRestaurante]?.[plato.idPlato];
-                const disponibleFinal = disponibleBackend !== undefined ? disponibleBackend : plato.disponible;
-
-                return {
-                    ...plato,
-                    disponible: disponibleFinal
-                };
-            });
-            return { ...restaurante, menu: menuActualizado };
-        });
-
-        return restaurantesActualizados;
-    }, [restaurantesProcesados, universidadSeleccionada, disponibilidadLocal]);
+    }, [restaurantesProcesados, universidadSeleccionada]);
 
     // =============== FUNCIONES DE OBTENCIÓN ===============
     const obtenerRestaurantePorId = useCallback((id: number): Restaurante | undefined => {
@@ -110,6 +81,7 @@ export const useRestaurantes = () => {
     // ✅ Obtener disponibilidad de un restaurante desde backend
     const obtenerDisponibilidadPlatos = useCallback(async (idRestaurante: number): Promise<{ [key: number]: boolean }> => {
         try {
+            console.log(`🔍 Obteniendo disponibilidad para restaurante ${idRestaurante}...`);
             const resultado = await obtenerDisponibilidadRestaurante(idRestaurante.toString());
 
             if (resultado.success && resultado.disponibilidad) {
@@ -119,13 +91,21 @@ export const useRestaurantes = () => {
                     disponibilidadNumerica[parseInt(key)] = value;
                 });
 
+                console.log(`✅ Disponibilidad obtenida para restaurante ${idRestaurante}:`, disponibilidadNumerica);
+
                 // ✅ Actualizar estado local
-                setDisponibilidadLocal(prev => ({
-                    ...prev,
-                    [idRestaurante]: disponibilidadNumerica
-                }));
+                setDisponibilidadLocal(prev => {
+                    const nuevoEstado = {
+                        ...prev,
+                        [idRestaurante]: disponibilidadNumerica
+                    };
+                    console.log(`💾 Estado de disponibilidad actualizado:`, nuevoEstado);
+                    return nuevoEstado;
+                });
 
                 return disponibilidadNumerica;
+            } else {
+                console.log(`⚠️ No se encontró disponibilidad para restaurante ${idRestaurante}:`, resultado);
             }
 
             return {};
@@ -134,6 +114,8 @@ export const useRestaurantes = () => {
             return {};
         }
     }, [obtenerDisponibilidadRestaurante]);
+
+
 
     // ✅ Guardar cambios de disponibilidad
     const guardarCambiosDisponibilidad = useCallback(async (

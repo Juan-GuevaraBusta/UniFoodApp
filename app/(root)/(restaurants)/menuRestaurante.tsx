@@ -1,13 +1,18 @@
 /* eslint-disable prettier/prettier */
 // app/(root)/(restaurants)/menuRestaurante.tsx - CORREGIDO PARA DISPONIBILIDAD
+import type { Schema } from '@/amplify/data/resource';
 import { useCarrito } from "@/context/contextCarrito";
 import { useRestaurantes, type Plato } from '@/hooks/useRestaurantes';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useFocusEffect } from '@react-navigation/native';
+import { generateClient } from 'aws-amplify/data';
 import { router, Stack } from 'expo-router';
 import { Clock, ShoppingCart, Star } from "lucide-react-native";
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useState } from 'react';
 import { Alert, FlatList, Image, RefreshControl, Text, TouchableOpacity, View } from "react-native";
+
+// ✅ Cliente GraphQL tipado para producción
+const client = generateClient<Schema>();
 
 const menuRestaurante = () => {
   const [restauranteActual, setRestauranteActual] = useState('');
@@ -20,30 +25,29 @@ const menuRestaurante = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
 
-  // ✅ Usando el hook integrado para obtener datos actualizados
+  // ✅ Usando el hook simplificado
   const {
-    obtenerRestaurantePorId,
-    forzarRecargaDisponibilidad,
-    precargarDisponibilidadRestaurante,
-    disponibilidadLocal,
-    isLoadingDisponibilidad
+    restaurantesFiltrados,
+    obtenerRestaurantePorId
   } = useRestaurantes();
 
   const { obtenerCantidadTotalCarrito } = useCarrito();
 
-  // ✅ NUEVA ESTRATEGIA: Pre-cargar disponibilidad en cuanto se enfoca la pantalla
+  // ✅ Cargar datos al enfocar la pantalla (patrón de pedidos)
   useFocusEffect(
     useCallback(() => {
-      console.log('🍽️ MenuRestaurante - Pantalla enfocada, iniciando carga...');
-      inicializarDatos();
+      console.log('🍽️ USUARIO - Pantalla menu enfocada, cargando datos...');
+      cargarDatosRestaurante();
     }, [])
   );
 
-  // ✅ PASO 1: Inicializar datos básicos
-  const inicializarDatos = async () => {
+  // ✅ FUNCIÓN: Cargar datos del restaurante con disponibilidad actualizada (patrón de pedidos)
+  const cargarDatosRestaurante = async () => {
     try {
+      console.log('🍽️ USUARIO - Cargando datos del restaurante...');
       setIsInitialLoading(true);
 
+      // ✅ PASO 1: Obtener datos básicos del restaurante
       const [nombreRestaurante, idRestauranteStr] = await Promise.all([
         AsyncStorage.getItem('restauranteNombre'),
         AsyncStorage.getItem('restauranteSeleccionado')
@@ -53,86 +57,104 @@ const menuRestaurante = () => {
         setRestauranteActual(nombreRestaurante);
       }
 
-      if (idRestauranteStr) {
-        const id = parseInt(idRestauranteStr);
-        setRestauranteId(id);
-
-        const restaurante = obtenerRestaurantePorId(id);
-        if (restaurante) {
-          setImagenRestaurante(restaurante.imagen);
-          setCalificacion(restaurante.calificacionRestaurante);
-          setTiempoEntrega(restaurante.tiempoEntrega);
-          setCategorias(restaurante.categorias);
-          setItemsMenu(restaurante.menu);
-        }
+      if (!idRestauranteStr) {
+        console.error('❌ USUARIO - No se encontró ID del restaurante');
+        return;
       }
-    } catch (error) {
-      console.error('Error inicializando datos:', error);
+
+      const id = parseInt(idRestauranteStr);
+      setRestauranteId(id);
+
+      // ✅ PASO 2: Obtener restaurante de datos locales
+      const restaurante = obtenerRestaurantePorId(id);
+      if (!restaurante) {
+        console.error('❌ USUARIO - Restaurante no encontrado con ID:', id);
+        return;
+      }
+
+      // ✅ PASO 3: Configurar datos básicos
+      setImagenRestaurante(restaurante.imagen);
+      setCalificacion(restaurante.calificacionRestaurante);
+      setTiempoEntrega(restaurante.tiempoEntrega);
+      setCategorias(restaurante.categorias);
+
+      // ✅ PASO 4: Obtener disponibilidad directamente del backend
+      console.log('🔍 USUARIO - Obteniendo disponibilidad del backend...');
+      const { data: disponibilidadPlatos, errors } = await client.models.DisponibilidadPlato.list({
+        filter: {
+          restauranteId: { eq: id.toString() }
+        }
+      });
+
+      if (errors && errors.length > 0) {
+        console.error('❌ USUARIO - Error obteniendo disponibilidad:', errors);
+        // Usar menú original si hay error
+        setItemsMenu(restaurante.menu);
+        return;
+      }
+
+      // ✅ PASO 5: Procesar disponibilidad y actualizar menú
+      const disponibilidad: { [platoId: string]: boolean } = {};
+      if (disponibilidadPlatos) {
+        disponibilidadPlatos.forEach((item: any) => {
+          disponibilidad[item.platoId] = item.disponible;
+        });
+      }
+
+      console.log('✅ USUARIO - Disponibilidad obtenida:', disponibilidad);
+
+      // ✅ PASO 6: Aplicar disponibilidad al menú
+      const menuActualizado = restaurante.menu.map(plato => {
+        const disponibleBackend = disponibilidad[plato.idPlato.toString()];
+        const disponibleFinal = disponibleBackend !== undefined ? disponibleBackend : plato.disponible;
+
+        console.log(`🍽️ Plato ${plato.nombre}: original=${plato.disponible}, backend=${disponibilidad[plato.idPlato.toString()]}, final=${disponibleFinal}`);
+
+        return {
+          ...plato,
+          disponible: disponibleFinal
+        };
+      });
+
+      setItemsMenu(menuActualizado);
+
+      // ✅ LOGS DE DEBUGGING
+      const disponibles = menuActualizado.filter(p => p.disponible).length;
+      const noDisponibles = menuActualizado.filter(p => !p.disponible).length;
+      console.log(`📊 USUARIO - Menú actualizado: ${disponibles} disponibles, ${noDisponibles} no disponibles`);
+
+    } catch (error: any) {
+      console.error('❌ USUARIO - Error cargando datos del restaurante:', error);
+      Alert.alert('Error', 'No se pudieron cargar los datos del restaurante: ' + error.message);
     } finally {
       setIsInitialLoading(false);
     }
   };
 
-  
 
-  // ✅ WATCHER: Actualizar menú cuando cambie la disponibilidad
-  useEffect(() => {
-    if (idRestaurante > 0 && !isInitialLoading) {
-      const restaurante = obtenerRestaurantePorId(idRestaurante);
-      if (restaurante) {
-        setItemsMenu(restaurante.menu);
-      }
-    }
-  }, [disponibilidadLocal, idRestaurante, isInitialLoading]);
 
-  // ✅ Función para refrescar manualmente (pull-to-refresh)
+
+
+
+
+  // ✅ Pull to refresh (patrón de pedidos)
   const onRefresh = useCallback(async () => {
+    console.log('🔄 USUARIO - Refrescando menú...');
     setRefreshing(true);
+    await cargarDatosRestaurante();
+    setRefreshing(false);
+  }, []);
 
-    try {
-      console.log('🔄 Refrescando menú del restaurante...');
-
-      // Pre-cargar disponibilidad específica y forzar recarga general
-      await Promise.all([
-        idRestaurante > 0 ? precargarDisponibilidadRestaurante(idRestaurante) : Promise.resolve(),
-        forzarRecargaDisponibilidad()
-      ]);
-
-      // Actualizar menú
-      await cargarMenuConDisponibilidad();
-
-      console.log('✅ Menú refrescado');
-    } catch (error) {
-      console.error('❌ Error refrescando menú:', error);
-    } finally {
-      setRefreshing(false);
-    }
-  }, [idRestaurante, precargarDisponibilidadRestaurante, forzarRecargaDisponibilidad]);
-
-  // ✅ MEJORADA: Función para seleccionar plato con verificación doble
+  // ✅ Función para seleccionar plato (simplificada)
   const seleccionarPlato = async (plato: Plato) => {
-    // ✅ VERIFICACIÓN DOBLE de disponibilidad
-    console.log('🎯 Usuario seleccionó plato:', {
+    console.log('🎯 USUARIO - Seleccionó plato:', {
       nombre: plato.nombre,
       id: plato.idPlato,
-      disponibleEnObjeto: plato.disponible,
-      restauranteId: idRestaurante
+      disponible: plato.disponible
     });
 
-    // ✅ Verificar disponibilidad actual desde el hook
-    const restauranteActualizado = obtenerRestaurantePorId(idRestaurante);
-    const platoActualizado = restauranteActualizado?.menu.find(p => p.idPlato === plato.idPlato);
-
-    console.log('🔍 Verificación actualizada:', {
-      platoEncontrado: !!platoActualizado,
-      disponibleActualizado: platoActualizado?.disponible,
-    });
-
-    // ✅ Usar la disponibilidad más actualizada
-    const estaDisponible = platoActualizado?.disponible ?? plato.disponible;
-
-    if (!estaDisponible) {
-      console.log('❌ Plato NO disponible, mostrando alerta');
+    if (!plato.disponible) {
+      console.log('❌ USUARIO - Plato no disponible');
       Alert.alert(
         'Plato no disponible',
         `Lo sentimos, ${plato.nombre} está temporalmente agotado. Por favor elige otro plato.`,
@@ -141,7 +163,7 @@ const menuRestaurante = () => {
       return;
     }
 
-    console.log('✅ Plato disponible, navegando a detalles');
+    console.log('✅ USUARIO - Plato disponible, navegando a detalles');
 
     // Guardar plato en AsyncStorage para la siguiente pantalla
     await AsyncStorage.setItem('platoSeleccionado', plato.idPlato.toString());
@@ -155,7 +177,18 @@ const menuRestaurante = () => {
   const agruparPorCategoria = () => {
     const grupos: { [key: string]: Plato[] } = {};
 
+    // ✅ Verificación de seguridad
+    if (!itemsMenu || itemsMenu.length === 0) {
+      console.log('⚠️ itemsMenu está vacío o no definido');
+      return grupos;
+    }
+
     itemsMenu.forEach(plato => {
+      if (!plato || !plato.categoria) {
+        console.log('⚠️ Plato inválido encontrado:', plato);
+        return;
+      }
+
       const categoria = plato.categoria;
       if (!grupos[categoria]) {
         grupos[categoria] = [];
@@ -171,8 +204,8 @@ const menuRestaurante = () => {
     return `$${precio.toLocaleString('es-CO')}`;
   };
 
-  // ✅ Pantalla de carga mejorada mientras se obtienen los datos
-  if (isInitialLoading || (itemsMenu.length === 0 && isLoadingDisponibilidad)) {
+  // ✅ Pantalla de carga mientras se obtienen los datos
+  if (isInitialLoading || itemsMenu.length === 0) {
     return (
       <>
         <Stack.Screen options={{ headerShown: false }} />
@@ -205,11 +238,11 @@ const menuRestaurante = () => {
               <View className="bg-gray-200 rounded-full h-2">
                 <View
                   className="bg-[#132e3c] h-2 rounded-full transition-all duration-1000"
-                  style={{ width: isLoadingDisponibilidad ? '70%' : '100%' }}
+                  style={{ width: isInitialLoading ? '70%' : '100%' }}
                 />
               </View>
               <Text className="text-gray-500 text-xs text-center mt-2">
-                {isLoadingDisponibilidad ? 'Cargando disponibilidad...' : 'Finalizando...'}
+                {isInitialLoading ? 'Cargando menú...' : 'Finalizando...'}
               </Text>
             </View>
           </View>
@@ -314,13 +347,15 @@ const menuRestaurante = () => {
         </View>
 
         {/* ✅ Indicador de actualización */}
-        {(refreshing || isLoadingDisponibilidad) && (
+        {refreshing && (
           <View className="px-5 py-2 bg-blue-50">
             <Text className="text-blue-600 text-xs font-JakartaMedium text-center">
-              🔄 {refreshing ? 'Refrescando menú...' : 'Verificando disponibilidad...'}
+              🔄 Refrescando menú...
             </Text>
           </View>
         )}
+
+
 
         {/* Lista del menú */}
         <View className="flex-1 px-5 pt-2 bg-white">
@@ -376,12 +411,12 @@ const menuRestaurante = () => {
                           />
                         </View>
 
-                        {/* ✅ Overlay de agotado */}
+                        {/* ✅ Overlay de agotado mejorado */}
                         {!plato.disponible && (
-                          <View className="absolute inset-0 bg-black bg-opacity-60 rounded-t-xl flex items-center justify-center">
-                            <View className="bg-red-500 px-3 py-1 rounded-full">
-                              <Text className="text-white font-JakartaBold text-xs">
-                                AGOTADO
+                          <View className="absolute inset-0 bg-black bg-opacity-70 rounded-t-xl flex items-center justify-center">
+                            <View className="bg-red-600 px-4 py-2 rounded-lg shadow-lg border-2 border-white">
+                              <Text className="text-white font-JakartaBold text-sm text-center">
+                                🔴 AGOTADO
                               </Text>
                             </View>
                           </View>
@@ -406,6 +441,7 @@ const menuRestaurante = () => {
                           numberOfLines={2}
                         >
                           {plato.nombre}
+                          {!plato.disponible && ' (Agotado)'}
                         </Text>
 
                         <Text
@@ -440,7 +476,7 @@ const menuRestaurante = () => {
               Platos disponibles: {itemsMenu.filter(p => p.disponible).length}/{itemsMenu.length}
             </Text>
             <Text className="text-gray-500 text-xs text-center">
-              Restaurante ID: {idRestaurante} | Disponibilidad local: {disponibilidadLocal[idRestaurante] ? 'SÍ' : 'NO'}
+              Restaurante ID: {idRestaurante}
             </Text>
           </View>
         )}
