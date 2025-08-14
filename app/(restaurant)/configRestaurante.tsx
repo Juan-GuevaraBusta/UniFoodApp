@@ -1,21 +1,21 @@
 /* eslint-disable prettier/prettier */
-import { Text, TouchableOpacity, View, FlatList, Image, Switch, Alert, ActivityIndicator } from "react-native";
-import { router } from 'expo-router';
-import { useState, useEffect } from 'react';
-import { useRestaurantes, type Plato } from '@/hooks/useRestaurantes';
 import { useAuth } from "@/hooks/useAuth";
+import { useRestaurantes, type Plato } from '@/hooks/useRestaurantes';
+import { useAmplifyData } from '@/hooks/useAmplifyData';
+import { router } from 'expo-router';
+import { ArrowLeft, Clock, RefreshCw, Star } from "lucide-react-native";
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, Alert, FlatList, Image, Switch, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { ArrowLeft, Star, Clock, Save, RefreshCw } from "lucide-react-native";
 
 const ConfigRestaurante = () => {
     const { user, verificarSesion } = useAuth();
     const { obtenerRestaurantePorId, guardarCambiosDisponibilidad, obtenerDisponibilidadPlatos } = useRestaurantes();
+    const { actualizarDisponibilidadPlato } = useAmplifyData();
 
     // Estados del componente
     const [restauranteData, setRestauranteData] = useState<any>(null);
     const [platosDisponibles, setPlatosDisponibles] = useState<{ [key: number]: boolean }>({});
-    const [disponibilidadOriginal, setDisponibilidadOriginal] = useState<{ [key: number]: boolean }>({});
-    const [cambiosRealizados, setCambiosRealizados] = useState(false);
     const [guardando, setGuardando] = useState(false);
 
     // ✅ Verificar sesión al cargar el componente - IGUAL QUE EN HOME
@@ -26,17 +26,14 @@ const ConfigRestaurante = () => {
     // ✅ Cargar datos del restaurante - MISMA LÓGICA QUE EN HOME
     useEffect(() => {
         if (user?.restaurantInfo?.restauranteId) {
-            const timer = setTimeout(() => {
+            const timer = setTimeout(async () => {
                 const restaurante = obtenerRestaurantePorId(user.restaurantInfo!.restauranteId);
                 setRestauranteData(restaurante);
 
-                // Cargar disponibilidad actual (local + original)
+                // Cargar disponibilidad actual desde backend
                 if (restaurante?.menu) {
-                    const disponibilidadActual = obtenerDisponibilidadPlatos(user.restaurantInfo!.restauranteId);
+                    const disponibilidadActual = await obtenerDisponibilidadPlatos(user.restaurantInfo!.restauranteId);
                     setPlatosDisponibles(disponibilidadActual);
-                    setDisponibilidadOriginal(disponibilidadActual);
-
-                    console.log('📊 Disponibilidad cargada en config:', disponibilidadActual);
                 }
             }, 100);
 
@@ -44,127 +41,67 @@ const ConfigRestaurante = () => {
         }
     }, [user]);
 
-    // Función para cambiar disponibilidad de un plato
-    const toggleDisponibilidadPlato = (idPlato: number) => {
-        setPlatosDisponibles(prev => {
-            const nuevaDisponibilidad = {
-                ...prev,
-                [idPlato]: !prev[idPlato]
-            };
+    // Función para cambiar disponibilidad de un plato - ACTUALIZA EN TIEMPO REAL
+    const toggleDisponibilidadPlato = async (idPlato: number) => {
+        if (!user?.restaurantInfo?.restauranteId) return;
 
-            // Verificar cambios comparando con disponibilidad original
-            const hayCambios = Object.keys(nuevaDisponibilidad).some(
-                platoId => nuevaDisponibilidad[parseInt(platoId)] !== disponibilidadOriginal[parseInt(platoId)]
+        const nuevaDisponibilidad = !platosDisponibles[idPlato];
+
+        try {
+            // ✅ Actualizar en backend inmediatamente
+            const resultado = await actualizarDisponibilidadPlato(
+                idPlato.toString(),
+                user.restaurantInfo.restauranteId.toString(),
+                nuevaDisponibilidad
             );
 
-            setCambiosRealizados(hayCambios);
-            console.log('🔄 Toggle plato:', idPlato, 'Nueva disponibilidad:', !prev[idPlato], 'Hay cambios:', hayCambios);
+            if (resultado.success) {
+                // ✅ Actualizar estado local
+                setPlatosDisponibles(prev => ({
+                    ...prev,
+                    [idPlato]: nuevaDisponibilidad
+                }));
 
-            return nuevaDisponibilidad;
-        });
+                // ✅ Mostrar confirmación
+                const plato = restauranteData?.menu?.find((p: any) => p.idPlato === idPlato);
+                const nombrePlato = plato?.nombre || `Plato ${idPlato}`;
+                const estado = nuevaDisponibilidad ? 'disponible' : 'no disponible';
+
+                Alert.alert(
+                    '✅ Actualizado',
+                    `${nombrePlato} ahora está ${estado}`,
+                    [{ text: 'OK' }]
+                );
+            } else {
+                Alert.alert('Error', resultado.error || 'No se pudo actualizar la disponibilidad');
+            }
+        } catch (error) {
+            console.error('Error actualizando disponibilidad:', error);
+            Alert.alert('Error', 'Ocurrió un error al actualizar la disponibilidad');
+        }
     };
 
-    // Función para guardar cambios
+    // Función para recargar disponibilidad
     const guardarCambios = async () => {
-        if (!user?.restaurantInfo || !cambiosRealizados) return;
+        if (!user?.restaurantInfo?.restauranteId) return;
 
         setGuardando(true);
 
         try {
-            console.log('💾 Guardando cambios de disponibilidad...');
+            // ✅ Recargar disponibilidad desde backend
+            const disponibilidadActual = await obtenerDisponibilidadPlatos(user.restaurantInfo.restauranteId);
+            setPlatosDisponibles(disponibilidadActual);
 
-            // Guardar todos los cambios usando la función integrada
-            const success = await guardarCambiosDisponibilidad(
-                user.restaurantInfo.restauranteId,
-                platosDisponibles
-            );
-
-            if (success) {
-                // Identificar cambios específicos para el mensaje
-                const platosModificados: Array<{ plato: string, estado: string }> = [];
-
-                Object.keys(platosDisponibles).forEach(platoIdStr => {
-                    const platoId = parseInt(platoIdStr);
-                    const nuevaDisponibilidad = platosDisponibles[platoId];
-                    const disponibilidadOriginalPlato = disponibilidadOriginal[platoId];
-
-                    if (nuevaDisponibilidad !== disponibilidadOriginalPlato) {
-                        const plato = restauranteData.menu.find((p: any) => p.idPlato === platoId);
-                        platosModificados.push({
-                            plato: plato?.nombre || `Plato ${platoId}`,
-                            estado: nuevaDisponibilidad ? 'disponible' : 'no disponible'
-                        });
-                    }
-                });
-
-                // Actualizar estado original con los nuevos valores
-                setDisponibilidadOriginal({ ...platosDisponibles });
-                setCambiosRealizados(false);
-
-                // Mostrar confirmación
-                if (platosModificados.length > 0) {
-                    const resumenCambios = platosModificados
-                        .map(cambio => `• ${cambio.plato}: ${cambio.estado}`)
-                        .join('\n');
-
-                    Alert.alert(
-                        '✅ Cambios guardados exitosamente',
-                        `Se actualizaron ${platosModificados.length} plato(s):\n\n${resumenCambios}\n\nLos estudiantes verán estos cambios inmediatamente.`,
-                        [
-                            {
-                                text: 'Ver vista previa',
-                                onPress: () => router.push('/(restaurant)/viewRestaurante')
-                            },
-                            {
-                                text: 'Continuar editando',
-                                style: 'cancel'
-                            }
-                        ]
-                    );
-                } else {
-                    Alert.alert('✅ Guardado', 'Configuración actualizada correctamente.');
-                }
-            } else {
-                throw new Error('Error al guardar en AsyncStorage');
-            }
-
+            Alert.alert('✅ Actualizado', 'Disponibilidad actualizada correctamente.');
         } catch (error) {
-            console.error('❌ Error guardando cambios:', error);
-            Alert.alert(
-                'Error al guardar',
-                'No se pudieron guardar los cambios. Intenta nuevamente.',
-                [{ text: 'OK' }]
-            );
+            console.error('Error recargando disponibilidad:', error);
+            Alert.alert('Error', 'No se pudo actualizar la disponibilidad');
         } finally {
             setGuardando(false);
         }
     };
 
-    // Función para descartar cambios
-    const descartarCambios = () => {
-        if (!cambiosRealizados) return;
 
-        Alert.alert(
-            'Descartar cambios',
-            '¿Estás seguro de que quieres descartar todos los cambios realizados?',
-            [
-                {
-                    text: 'Cancelar',
-                    style: 'cancel'
-                },
-                {
-                    text: 'Descartar',
-                    style: 'destructive',
-                    onPress: () => {
-                        // Restaurar a la disponibilidad original
-                        setPlatosDisponibles({ ...disponibilidadOriginal });
-                        setCambiosRealizados(false);
-                        console.log('🔄 Cambios descartados, restaurando a:', disponibilidadOriginal);
-                    }
-                }
-            ]
-        );
-    };
 
     // Función para agrupar platos por categoría
     const agruparPorCategoria = () => {
@@ -219,16 +156,22 @@ const ConfigRestaurante = () => {
 
                 <View className="relative mb-4 h-12">
                     <TouchableOpacity
-                        onPress={() => {
-                            if (cambiosRealizados) {
-                                descartarCambios();
-                            } else {
-                                router.back();
-                            }
-                        }}
+                        onPress={() => router.back()}
                         className="absolute left-0 top-0 w-10 h-10 rounded-full flex items-center justify-center z-10"
                     >
                         <ArrowLeft size={24} color="#132e3c" />
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                        onPress={guardarCambios}
+                        disabled={guardando}
+                        className="absolute right-0 top-0 w-10 h-10 rounded-full flex items-center justify-center z-10"
+                    >
+                        {guardando ? (
+                            <ActivityIndicator size="small" color="#132e3c" />
+                        ) : (
+                            <RefreshCw size={24} color="#132e3c" />
+                        )}
                     </TouchableOpacity>
 
                     <View className="absolute left-0 right-0 top-0 flex items-center justify-center z-10">
@@ -362,67 +305,7 @@ const ConfigRestaurante = () => {
                 />
             </View>
 
-            {/* Footer fijo con botones de acción */}
-            {cambiosRealizados && (
-                <View className="bg-white border-t border-gray-200 px-5 py-4">
-                    {/* Mensaje de cambios pendientes */}
-                    <View className="mb-4 p-3 bg-yellow-50 rounded-xl border border-yellow-200">
-                        <Text className="text-yellow-800 font-JakartaBold text-sm text-center">
-                            ⚠️ Hay cambios sin guardar
-                        </Text>
-                        <Text className="text-yellow-700 font-JakartaMedium text-xs text-center mt-1">
-                            Los estudiantes verán los cambios después de guardar
-                        </Text>
-                    </View>
 
-                    {/* Botones de acción */}
-                    <View className="flex-row space-x-3">
-                        {/* Botón descartar */}
-                        <TouchableOpacity
-                            onPress={descartarCambios}
-                            disabled={guardando}
-                            className="flex-1 py-3 rounded-xl border-2 border-gray-300 flex-row items-center justify-center"
-                        >
-                            <RefreshCw size={18} color="#6B7280" />
-                            <Text className="text-gray-600 font-JakartaBold text-base ml-2">
-                                Descartar
-                            </Text>
-                        </TouchableOpacity>
-
-                        {/* Botón guardar */}
-                        <TouchableOpacity
-                            onPress={guardarCambios}
-                            disabled={guardando}
-                            className={`flex-2 py-3 rounded-xl flex-row items-center justify-center ${guardando ? 'bg-gray-400' : 'bg-[#132e3c]'
-                                }`}
-                            style={{
-                                flex: 2,
-                                shadowColor: '#000',
-                                shadowOffset: { width: 0, height: 2 },
-                                shadowOpacity: 0.2,
-                                shadowRadius: 4,
-                                elevation: 4,
-                            }}
-                        >
-                            {guardando ? (
-                                <>
-                                    <ActivityIndicator size="small" color="white" />
-                                    <Text className="text-white font-JakartaBold text-base ml-2">
-                                        Guardando...
-                                    </Text>
-                                </>
-                            ) : (
-                                <>
-                                    <Save size={18} color="white" />
-                                    <Text className="text-white font-JakartaBold text-base ml-2">
-                                        Guardar cambios
-                                    </Text>
-                                </>
-                            )}
-                        </TouchableOpacity>
-                    </View>
-                </View>
-            )}
         </SafeAreaView>
     );
 };

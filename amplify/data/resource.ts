@@ -24,6 +24,7 @@ const schema = a.schema({
       tiempoEntrega: a.integer(),
       platos: a.hasMany('Plato', 'restauranteId'),
       pedidos: a.hasMany('Pedido', 'restauranteId'),
+      disponibilidadPlatos: a.hasMany('DisponibilidadPlato', 'restauranteId'),
     })
     .authorization((allow: any) => [
       allow.guest().to(['read']),
@@ -41,6 +42,7 @@ const schema = a.schema({
       restauranteId: a.id().required(),
       restaurante: a.belongsTo('Restaurante', 'restauranteId'),
       toppings: a.hasMany('Topping', 'platoId'),
+      disponibilidad: a.hasMany('DisponibilidadPlato', 'platoId'),
     })
     .authorization((allow: any) => [
       allow.guest().to(['read']),
@@ -111,6 +113,40 @@ const schema = a.schema({
       index('restauranteEstado').sortKeys(['fechaPedido']), // Para pedidos por restaurante y estado
       index('usuarioEmail').sortKeys(['fechaPedido']), // Para pedidos por usuario
       index('restauranteId').sortKeys(['fechaPedido']), // Para todos los pedidos de un restaurante
+    ]),
+
+  // ✅ MODELO DISPONIBILIDAD PLATO - Para sincronización en tiempo real
+  DisponibilidadPlato: a
+    .model({
+      // Identificación del plato y restaurante
+      platoId: a.string().required(),
+      restauranteId: a.string().required(),
+
+      // Estado de disponibilidad
+      disponible: a.boolean().required(),
+
+      // Información adicional
+      comentario: a.string(),
+      fechaActualizacion: a.datetime().required(),
+
+      // Relaciones
+      restaurante: a.belongsTo('Restaurante', 'restauranteId'),
+      plato: a.belongsTo('Plato', 'platoId'),
+
+      // Índice compuesto para consultas eficientes
+      restaurantePlato: a.string().required(),
+    })
+    .authorization((allow: any) => [
+      // ✅ Permitir autenticados crear, leer y actualizar
+      allow.authenticated().to(['create', 'read', 'update']),
+      // ✅ Permitir API Key para lectura (para casos de emergencia)
+      allow.guest().to(['read']),
+    ])
+    // ✅ Índices secundarios para consultas eficientes
+    .secondaryIndexes((index: any) => [
+      index('restaurantePlato').sortKeys(['fechaActualizacion']), // Para disponibilidad por restaurante y plato
+      index('restauranteId').sortKeys(['fechaActualizacion']), // Para todos los platos de un restaurante
+      index('platoId').sortKeys(['fechaActualizacion']), // Para un plato específico
     ]),
 });
 

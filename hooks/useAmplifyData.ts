@@ -525,6 +525,168 @@ export const useAmplifyData = () => {
         }
     };
 
+    // ✅ ACTUALIZAR DISPONIBILIDAD PLATO - Usando el mismo patrón que pedidos
+    const actualizarDisponibilidadPlato = async (
+        platoId: string,
+        restauranteId: string,
+        disponible: boolean,
+        comentario?: string
+    ): Promise<{ success: boolean; error?: string; needsReauth?: boolean }> => {
+        try {
+            console.log(`🔄 Actualizando disponibilidad - Plato: ${platoId}, Restaurante: ${restauranteId}, Disponible: ${disponible}`);
+
+            // ✅ Verificar autenticación
+            await verificarAutenticacion();
+
+            // ✅ Verificar que el usuario es dueño del restaurante
+            const currentUser = await getCurrentUser();
+            const userEmail = currentUser.signInDetails?.loginId || '';
+            const restaurantInfo = getRestaurantInfoByEmail(userEmail);
+
+            if (!restaurantInfo || restaurantInfo.restauranteId.toString() !== restauranteId) {
+                return {
+                    success: false,
+                    error: 'No tienes permisos para actualizar este restaurante'
+                };
+            }
+
+            // ✅ Buscar disponibilidad existente
+            const { data: disponibilidadExistente, errors: errorsList } = await client.models.DisponibilidadPlato.list({
+                filter: {
+                    restaurantePlato: { eq: `${restauranteId}#${platoId}` }
+                }
+            });
+
+            if (errorsList && errorsList.length > 0) {
+                console.error('❌ Error buscando disponibilidad existente:', errorsList);
+                return {
+                    success: false,
+                    error: errorsList[0].message || 'Error buscando disponibilidad existente'
+                };
+            }
+
+            const disponibilidadData = {
+                platoId,
+                restauranteId,
+                disponible,
+                comentario: comentario || undefined,
+                fechaActualizacion: new Date().toISOString(),
+                restaurantePlato: `${restauranteId}#${platoId}`
+            };
+
+            let result;
+
+            if (disponibilidadExistente && disponibilidadExistente.length > 0) {
+                // ✅ Actualizar registro existente
+                const { data, errors } = await client.models.DisponibilidadPlato.update({
+                    id: disponibilidadExistente[0].id,
+                    ...disponibilidadData
+                });
+
+                if (errors && errors.length > 0) {
+                    console.error('❌ Error actualizando disponibilidad:', errors);
+                    return {
+                        success: false,
+                        error: errors[0].message || 'Error actualizando disponibilidad'
+                    };
+                }
+
+                result = { data, errors };
+            } else {
+                // ✅ Crear nuevo registro
+                const { data, errors } = await client.models.DisponibilidadPlato.create(disponibilidadData);
+
+                if (errors && errors.length > 0) {
+                    console.error('❌ Error creando disponibilidad:', errors);
+                    return {
+                        success: false,
+                        error: errors[0].message || 'Error creando disponibilidad'
+                    };
+                }
+
+                result = { data, errors };
+            }
+
+            if (result.data) {
+                console.log('✅ Disponibilidad actualizada exitosamente:', result.data);
+                return {
+                    success: true
+                };
+            }
+
+            return {
+                success: false,
+                error: 'No se pudo actualizar la disponibilidad'
+            };
+
+        } catch (error: any) {
+            console.error('❌ Error actualizando disponibilidad:', error);
+
+            if (error.message?.includes('autenticación') ||
+                error.message?.includes('authentication') ||
+                error.message?.includes('Unauthorized') ||
+                error.message?.includes('Not Authorized') ||
+                error.name?.includes('NotAuthorizedException')) {
+                return {
+                    success: false,
+                    error: 'Sesión expirada. Por favor inicia sesión nuevamente.',
+                    needsReauth: true
+                };
+            }
+
+            return {
+                success: false,
+                error: error.message || 'Error actualizando disponibilidad'
+            };
+        }
+    };
+
+    // ✅ OBTENER DISPONIBILIDAD RESTAURANTE - Usando el mismo patrón que pedidos
+    const obtenerDisponibilidadRestaurante = async (
+        restauranteId: string
+    ): Promise<{ success: boolean; error?: string; disponibilidad?: { [platoId: string]: boolean }; needsReauth?: boolean }> => {
+        try {
+            console.log(`🔄 Obteniendo disponibilidad para restaurante ${restauranteId}...`);
+
+            // ✅ Obtener desde backend
+            const { data: disponibilidadPlatos, errors } = await client.models.DisponibilidadPlato.list({
+                filter: {
+                    restauranteId: { eq: restauranteId }
+                }
+            });
+
+            if (errors && errors.length > 0) {
+                console.error('❌ Error obteniendo disponibilidad:', errors);
+                return {
+                    success: false,
+                    error: errors[0].message || 'Error obteniendo disponibilidad'
+                };
+            }
+
+            // ✅ Procesar datos
+            const disponibilidad: { [platoId: string]: boolean } = {};
+            if (disponibilidadPlatos) {
+                disponibilidadPlatos.forEach((item: any) => {
+                    disponibilidad[item.platoId] = item.disponible;
+                });
+            }
+
+            console.log(`✅ Disponibilidad obtenida para restaurante ${restauranteId}:`, disponibilidad);
+
+            return {
+                success: true,
+                disponibilidad
+            };
+
+        } catch (error: any) {
+            console.error('❌ Error obteniendo disponibilidad:', error);
+            return {
+                success: false,
+                error: error.message || 'Error obteniendo disponibilidad'
+            };
+        }
+    };
+
     return {
         crearPedido,
         obtenerPedidosRestaurante,
@@ -532,6 +694,10 @@ export const useAmplifyData = () => {
         obtenerMisPedidos,
         verificarAutenticacion,
         user,
+
+        // ✅ NUEVAS: Funciones de disponibilidad
+        actualizarDisponibilidadPlato,
+        obtenerDisponibilidadRestaurante,
     };
 };
 

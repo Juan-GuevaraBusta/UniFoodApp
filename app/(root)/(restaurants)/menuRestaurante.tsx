@@ -1,15 +1,13 @@
 /* eslint-disable prettier/prettier */
 // app/(root)/(restaurants)/menuRestaurante.tsx - CORREGIDO PARA DISPONIBILIDAD
-import { Text, TouchableOpacity, View, FlatList, Image, Alert, RefreshControl } from "react-native";
-import { router } from 'expo-router';
-import { useState, useEffect } from 'react';
-import { useFocusEffect } from '@react-navigation/native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useCallback } from 'react';
-import { useRestaurantes, type Plato } from '@/hooks/useRestaurantes';
-import { Stack } from "expo-router";
-import { Star, Clock, ShoppingCart } from "lucide-react-native";
 import { useCarrito } from "@/context/contextCarrito";
+import { useRestaurantes, type Plato } from '@/hooks/useRestaurantes';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from '@react-navigation/native';
+import { router, Stack } from 'expo-router';
+import { Clock, ShoppingCart, Star } from "lucide-react-native";
+import { useCallback, useEffect, useState } from 'react';
+import { Alert, FlatList, Image, RefreshControl, Text, TouchableOpacity, View } from "react-native";
 
 const menuRestaurante = () => {
   const [restauranteActual, setRestauranteActual] = useState('');
@@ -41,12 +39,11 @@ const menuRestaurante = () => {
     }, [])
   );
 
-  // ✅ PASO 1: Inicializar datos básicos rápidamente
+  // ✅ PASO 1: Inicializar datos básicos
   const inicializarDatos = async () => {
     try {
       setIsInitialLoading(true);
 
-      // 🚀 PASO 1A: Obtener ID del restaurante rápidamente
       const [nombreRestaurante, idRestauranteStr] = await Promise.all([
         AsyncStorage.getItem('restauranteNombre'),
         AsyncStorage.getItem('restauranteSeleccionado')
@@ -60,86 +57,31 @@ const menuRestaurante = () => {
         const id = parseInt(idRestauranteStr);
         setRestauranteId(id);
 
-        console.log('📱 Inicializando restaurante ID:', id);
-
-        // 🚀 PASO 1B: Pre-cargar disponibilidad específica del restaurante en paralelo
-        const [, restauranteBase] = await Promise.all([
-          precargarDisponibilidadRestaurante(id),
-          obtenerRestaurantePorId(id)
-        ]);
-
-        // 🚀 PASO 1C: Cargar datos básicos inmediatamente
-        if (restauranteBase) {
-          setImagenRestaurante(restauranteBase.imagen);
-          setCalificacion(restauranteBase.calificacionRestaurante);
-          setTiempoEntrega(restauranteBase.tiempoEntrega);
-          setCategorias(restauranteBase.categorias);
-
-          console.log('📋 Datos básicos cargados para:', restauranteBase.nombreRestaurante);
+        const restaurante = obtenerRestaurantePorId(id);
+        if (restaurante) {
+          setImagenRestaurante(restaurante.imagen);
+          setCalificacion(restaurante.calificacionRestaurante);
+          setTiempoEntrega(restaurante.tiempoEntrega);
+          setCategorias(restaurante.categorias);
+          setItemsMenu(restaurante.menu);
         }
-
-        // 🚀 PASO 2: Cargar menú con disponibilidad en paralelo
-        await Promise.all([
-          cargarMenuConDisponibilidad(id),
-          forzarRecargaDisponibilidad()
-        ]);
       }
     } catch (error) {
-      console.error('❌ Error inicializando datos:', error);
+      console.error('Error inicializando datos:', error);
     } finally {
       setIsInitialLoading(false);
     }
   };
 
-  // ✅ PASO 2: Cargar menú con disponibilidad actualizada - MEJORADO con logging detallado
-  const cargarMenuConDisponibilidad = async (restauranteId?: number) => {
-    try {
-      const id = restauranteId || idRestaurante;
-      if (id <= 0) return;
-
-      console.log('🍽️ Cargando menú con disponibilidad para restaurante:', id);
-
-      // ✅ Intentar obtener el restaurante con disponibilidad
-      const restaurante = obtenerRestaurantePorId(id);
-
-      if (restaurante) {
-        // ✅ VERIFICACIÓN DETALLADA de cada plato
-        console.log('🔍 VERIFICACIÓN DETALLADA DE DISPONIBILIDAD:');
-        restaurante.menu.forEach(plato => {
-          console.log(`🍽️ Plato: ${plato.nombre}`);
-          console.log(`   - ID: ${plato.idPlato}`);
-          console.log(`   - Disponible en JSON original: ${plato.disponible}`);
-          console.log(`   - Disponibilidad actual procesada: ${plato.disponible}`);
-          console.log(`   - Disponibilidad local AsyncStorage: ${disponibilidadLocal[id] ? disponibilidadLocal[id][plato.idPlato] : 'No guardada'}`);
-          console.log('   ---');
-        });
-
-        setItemsMenu(restaurante.menu);
-
-        console.log('✅ Menú cargado con disponibilidad:', {
-          restaurante: restaurante.nombreRestaurante,
-          platosTotal: restaurante.menu.length,
-          platosDisponibles: restaurante.menu.filter(p => p.disponible).length,
-          detalleDisponibilidad: restaurante.menu.map(p => ({
-            id: p.idPlato,
-            nombre: p.nombre,
-            disponible: p.disponible,
-            disponibleOriginal: p.disponible // Para comparar
-          }))
-        });
-      } else {
-        console.error('❌ No se encontró el restaurante con ID:', id);
-      }
-    } catch (error) {
-      console.error('❌ Error cargando menú:', error);
-    }
-  };
+  
 
   // ✅ WATCHER: Actualizar menú cuando cambie la disponibilidad
   useEffect(() => {
     if (idRestaurante > 0 && !isInitialLoading) {
-      console.log('🔄 Disponibilidad cambió, actualizando menú...');
-      cargarMenuConDisponibilidad();
+      const restaurante = obtenerRestaurantePorId(idRestaurante);
+      if (restaurante) {
+        setItemsMenu(restaurante.menu);
+      }
     }
   }, [disponibilidadLocal, idRestaurante, isInitialLoading]);
 

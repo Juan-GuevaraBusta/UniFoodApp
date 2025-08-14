@@ -1,7 +1,7 @@
-// hooks/useRestaurantes.ts - VERSIÓN CON CARGA AGRESIVA
-import { useState, useMemo, useEffect, useCallback } from 'react';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+// hooks/useRestaurantes.ts - VERSIÓN SIMPLIFICADA
 import { restaurantes as restaurantesData } from "@/constants/index";
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useAmplifyData } from './useAmplifyData';
 
 // =============== INTERFACES ===============
 export interface Topping {
@@ -46,160 +46,30 @@ interface DisponibilidadData {
 export const useRestaurantes = () => {
     // Estados básicos
     const [universidadSeleccionada, setUniversidadSeleccionada] = useState<number>(1);
-
-    // ✅ CLAVE: Estado de disponibilidad que se actualiza automáticamente
     const [disponibilidadLocal, setDisponibilidadLocal] = useState<DisponibilidadData>({});
-    const [isLoadingDisponibilidad, setIsLoadingDisponibilidad] = useState(true);
-    const [lastLoadTime, setLastLoadTime] = useState<number>(0);
 
-    const STORAGE_KEY = 'restaurant_disponibilidad_';
-    const CACHE_DURATION = 2000; // 2 segundos de cache mínimo
-
-    // ✅ CRÍTICO: Cargar disponibilidad al inicializar Y configurar polling agresivo
-    useEffect(() => {
-        cargarDisponibilidadInicial();
-
-        // ✅ Polling más frecuente - cada 2 segundos
-        const interval = setInterval(() => {
-            cargarDisponibilidadLocal();
-        }, 2000);
-
-        return () => clearInterval(interval);
-    }, []);
-
-    // =============== GESTIÓN DE DISPONIBILIDAD ===============
-
-    // 📱 Cargar disponibilidad inicial (solo una vez)
-    const cargarDisponibilidadInicial = async () => {
-        console.log('🚀 Iniciando carga inicial de disponibilidad...');
-        setIsLoadingDisponibilidad(true);
-        await cargarDisponibilidadLocal();
-        setIsLoadingDisponibilidad(false);
-        console.log('✅ Carga inicial completada');
-    };
-
-    // 📱 Cargar datos de disponibilidad desde AsyncStorage con cache
-    const cargarDisponibilidadLocal = async () => {
-        try {
-            // ✅ Control de cache para evitar lecturas excesivas
-            const now = Date.now();
-            if (now - lastLoadTime < CACHE_DURATION) {
-                return;
-            }
-            setLastLoadTime(now);
-
-            const keys = await AsyncStorage.getAllKeys();
-            const disponibilidadKeys = keys.filter(key => key.startsWith(STORAGE_KEY));
-
-            const nuevaDisponibilidad: DisponibilidadData = {};
-
-            // ✅ Carga en paralelo para mayor velocidad
-            const loadPromises = disponibilidadKeys.map(async (key) => {
-                const restauranteId = parseInt(key.replace(STORAGE_KEY, ''));
-                const data = await AsyncStorage.getItem(key);
-
-                if (data) {
-                    try {
-                        const disponibilidadRestaurante = JSON.parse(data);
-                        nuevaDisponibilidad[restauranteId] = disponibilidadRestaurante;
-                    } catch (parseError) {
-                        console.error(`❌ Error parsing data for key ${key}:`, parseError);
-                    }
-                }
-            });
-
-            await Promise.all(loadPromises);
-
-            // ✅ Solo actualizar si hay cambios para evitar re-renders innecesarios
-            setDisponibilidadLocal(prev => {
-                const hasChanges = JSON.stringify(prev) !== JSON.stringify(nuevaDisponibilidad);
-                if (hasChanges) {
-                    console.log('🔄 Disponibilidad actualizada desde AsyncStorage:', {
-                        restaurantesConDatos: Object.keys(nuevaDisponibilidad).length,
-                        timestamp: new Date().toLocaleTimeString(),
-                        detalles: nuevaDisponibilidad
-                    });
-                    return nuevaDisponibilidad;
-                }
-                return prev;
-            });
-
-        } catch (error) {
-            console.error('❌ Error cargando disponibilidad local:', error);
-        }
-    };
-
-    // 💾 Guardar disponibilidad para un restaurante
-    const guardarDisponibilidadRestaurante = async (
-        restauranteId: number,
-        disponibilidad: { [platoId: number]: boolean }
-    ): Promise<boolean> => {
-        try {
-            const key = `${STORAGE_KEY}${restauranteId}`;
-            await AsyncStorage.setItem(key, JSON.stringify(disponibilidad));
-
-            // ✅ Actualizar estado local inmediatamente
-            setDisponibilidadLocal(prev => ({
-                ...prev,
-                [restauranteId]: disponibilidad
-            }));
-
-            console.log(`💾 Disponibilidad guardada para restaurante ${restauranteId}:`, disponibilidad);
-
-            // ✅ Forzar recarga inmediata pero sin bloquear
-            setTimeout(() => {
-                cargarDisponibilidadLocal();
-            }, 50);
-
-            return true;
-        } catch (error) {
-            console.error('❌ Error guardando disponibilidad:', error);
-            return false;
-        }
-    };
-
-    // 🔍 Obtener disponibilidad actual de un restaurante con fallback inteligente
-    const obtenerDisponibilidadRestaurante = useCallback((
-        restauranteId: number,
-        menuOriginal: any[]
-    ): { [platoId: number]: boolean } => {
-        // ✅ Prioridad 1: Datos locales de AsyncStorage
-        if (disponibilidadLocal[restauranteId]) {
-            console.log(`🔍 Usando disponibilidad LOCAL para restaurante ${restauranteId}:`, disponibilidadLocal[restauranteId]);
-            return disponibilidadLocal[restauranteId];
-        }
-
-        // ✅ Prioridad 2: Valores del JSON original como fallback
-        const disponibilidadOriginal: { [platoId: number]: boolean } = {};
-        menuOriginal.forEach(plato => {
-            disponibilidadOriginal[plato.idPlato] = plato.disponible;
-        });
-
-        console.log(`🔍 Usando disponibilidad ORIGINAL para restaurante ${restauranteId}:`, disponibilidadOriginal);
-        return disponibilidadOriginal;
-    }, [disponibilidadLocal]);
-
-    // 🔄 Verificar si un plato específico está disponible
-    const esPlatoDisponible = useCallback((
-        restauranteId: number,
-        platoId: number,
-        valorOriginal: boolean
-    ): boolean => {
-        if (disponibilidadLocal[restauranteId] &&
-            disponibilidadLocal[restauranteId][platoId] !== undefined) {
-            const disponible = disponibilidadLocal[restauranteId][platoId];
-            console.log(`🔄 Plato ${platoId} en restaurante ${restauranteId}: ${disponible ? 'DISPONIBLE' : 'NO DISPONIBLE'} (AsyncStorage)`);
-            return disponible;
-        }
-        console.log(`🔄 Plato ${platoId} en restaurante ${restauranteId}: ${valorOriginal ? 'DISPONIBLE' : 'NO DISPONIBLE'} (original)`);
-        return valorOriginal;
-    }, [disponibilidadLocal]);
+    // ✅ Hook de disponibilidad backend
+    const { obtenerDisponibilidadRestaurante, actualizarDisponibilidadPlato } = useAmplifyData();
 
     // =============== PROCESAMIENTO DE DATOS ===============
-
     const restaurantesProcesados = useMemo(() => {
         return restaurantesData as Restaurante[];
     }, []);
+
+    // ✅ Cargar disponibilidad automáticamente al inicializar
+    useEffect(() => {
+        const cargarDisponibilidadInicial = async () => {
+            try {
+                const restaurantesIds = restaurantesProcesados.map(r => r.idRestaurante);
+                const promises = restaurantesIds.map(id => obtenerDisponibilidadPlatos(id));
+                await Promise.all(promises);
+            } catch (error) {
+                console.error('Error cargando disponibilidad inicial:', error);
+            }
+        };
+
+        cargarDisponibilidadInicial();
+    }, [restaurantesProcesados]);
 
     // ✅ Restaurantes filtrados con disponibilidad actualizada
     const restaurantesFiltrados = useMemo(() => {
@@ -207,178 +77,131 @@ export const useRestaurantes = () => {
             restaurante => restaurante.idUniversidad === universidadSeleccionada
         );
 
-        // ✅ CRÍTICO: Aplicar disponibilidad actualizada a cada restaurante filtrado
+        // ✅ Aplicar disponibilidad del backend a cada plato
         const restaurantesActualizados = restaurantesFiltradosPorUniversidad.map(restaurante => {
-            const menuActualizado = restaurante.menu.map(plato => ({
-                ...plato,
-                disponible: esPlatoDisponible(restaurante.idRestaurante, plato.idPlato, plato.disponible)
-            }));
+            const menuActualizado = restaurante.menu.map(plato => {
+                // ✅ Prioridad: Backend > Original
+                const disponibleBackend = disponibilidadLocal[restaurante.idRestaurante]?.[plato.idPlato];
+                const disponibleFinal = disponibleBackend !== undefined ? disponibleBackend : plato.disponible;
 
-            const platosDisponibles = menuActualizado.filter(p => p.disponible).length;
-
-            console.log(`🍽️ Restaurante ${restaurante.nombreRestaurante} procesado:`, {
-                totalPlatos: menuActualizado.length,
-                platosDisponibles,
-                tieneDisponibilidadLocal: !!disponibilidadLocal[restaurante.idRestaurante]
+                return {
+                    ...plato,
+                    disponible: disponibleFinal
+                };
             });
-
-            return {
-                ...restaurante,
-                menu: menuActualizado
-            };
+            return { ...restaurante, menu: menuActualizado };
         });
 
         return restaurantesActualizados;
-    }, [restaurantesProcesados, universidadSeleccionada, disponibilidadLocal, esPlatoDisponible]);
+    }, [restaurantesProcesados, universidadSeleccionada, disponibilidadLocal]);
 
-    // ✅ Obtener restaurante por ID con disponibilidad actualizada - OPTIMIZADO
+    // =============== FUNCIONES DE OBTENCIÓN ===============
     const obtenerRestaurantePorId = useCallback((id: number): Restaurante | undefined => {
-        const restaurante = restaurantesProcesados.find(r => r.idRestaurante === id);
+        return restaurantesProcesados.find(restaurante => restaurante.idRestaurante === id);
+    }, [restaurantesProcesados]);
 
-        if (!restaurante) {
-            console.warn(`⚠️ Restaurante con ID ${id} no encontrado`);
-            return undefined;
-        }
-
-        // ✅ CRÍTICO: Aplicar disponibilidad local a cada plato
-        const menuActualizado = restaurante.menu.map(plato => ({
-            ...plato,
-            disponible: esPlatoDisponible(id, plato.idPlato, plato.disponible)
-        }));
-
-        console.log(`🔍 Restaurante ${id} cargado con disponibilidad actualizada:`, {
-            nombre: restaurante.nombreRestaurante,
-            platosOriginales: restaurante.menu.length,
-            platosDisponibles: menuActualizado.filter(p => p.disponible).length,
-            cambiosLocales: disponibilidadLocal[id] ? 'SÍ' : 'NO',
-            detalleDisponibilidad: menuActualizado.map(p => ({
-                id: p.idPlato,
-                nombre: p.nombre,
-                disponible: p.disponible
-            }))
-        });
-
-        return {
-            ...restaurante,
-            menu: menuActualizado
-        };
-    }, [restaurantesProcesados, esPlatoDisponible, disponibilidadLocal]);
-
-    const obtenerPlatoPorId = useCallback((idRestaurante: number, idPlato: number): Plato | undefined => {
-        const restaurante = obtenerRestaurantePorId(idRestaurante);
-        return restaurante?.menu.find(p => p.idPlato === idPlato);
+    const obtenerPlatoPorId = useCallback((restauranteId: number, platoId: number): Plato | undefined => {
+        const restaurante = obtenerRestaurantePorId(restauranteId);
+        return restaurante?.menu.find(plato => plato.idPlato === platoId);
     }, [obtenerRestaurantePorId]);
 
-    // =============== FUNCIONES PÚBLICAS DE DISPONIBILIDAD ===============
+    // =============== FUNCIONES DE DISPONIBILIDAD ===============
 
-    // ✅ Obtener estado de disponibilidad actual
-    const obtenerDisponibilidadPlatos = useCallback((idRestaurante: number): { [key: number]: boolean } => {
-        const restaurante = restaurantesProcesados.find(r => r.idRestaurante === idRestaurante);
-        if (!restaurante) return {};
+    // ✅ Obtener disponibilidad de un restaurante desde backend
+    const obtenerDisponibilidadPlatos = useCallback(async (idRestaurante: number): Promise<{ [key: number]: boolean }> => {
+        try {
+            const resultado = await obtenerDisponibilidadRestaurante(idRestaurante.toString());
 
-        return obtenerDisponibilidadRestaurante(idRestaurante, restaurante.menu);
-    }, [restaurantesProcesados, obtenerDisponibilidadRestaurante]);
+            if (resultado.success && resultado.disponibilidad) {
+                // ✅ Convertir string keys a number keys
+                const disponibilidadNumerica: { [key: number]: boolean } = {};
+                Object.entries(resultado.disponibilidad).forEach(([key, value]) => {
+                    disponibilidadNumerica[parseInt(key)] = value;
+                });
 
-    // ✅ Guardar múltiples cambios de disponibilidad
-    const guardarCambiosDisponibilidad = async (
+                // ✅ Actualizar estado local
+                setDisponibilidadLocal(prev => ({
+                    ...prev,
+                    [idRestaurante]: disponibilidadNumerica
+                }));
+
+                return disponibilidadNumerica;
+            }
+
+            return {};
+        } catch (error) {
+            console.error('❌ Error obteniendo disponibilidad:', error);
+            return {};
+        }
+    }, [obtenerDisponibilidadRestaurante]);
+
+    // ✅ Guardar cambios de disponibilidad
+    const guardarCambiosDisponibilidad = useCallback(async (
         idRestaurante: number,
         cambios: { [platoId: number]: boolean }
     ): Promise<boolean> => {
         try {
             console.log(`💾 Guardando cambios de disponibilidad para restaurante ${idRestaurante}:`, cambios);
 
-            const success = await guardarDisponibilidadRestaurante(idRestaurante, cambios);
+            // ✅ Guardar en backend
+            const promises = Object.entries(cambios).map(([platoId, disponible]) =>
+                actualizarDisponibilidadPlato(platoId, idRestaurante.toString(), disponible)
+            );
 
-            if (success) {
-                console.log('✅ Cambios guardados exitosamente');
+            const resultados = await Promise.all(promises);
+            const errores = resultados.filter(r => !r.success);
 
-                // ✅ Forzar actualización inmediata en múltiples momentos
-                await cargarDisponibilidadLocal();
-
-                // ✅ Segunda actualización para asegurar sincronización
-                setTimeout(async () => {
-                    await cargarDisponibilidadLocal();
-                }, 200);
+            if (errores.length > 0) {
+                console.error('❌ Errores guardando en backend:', errores);
+                return false;
             }
 
-            return success;
+            console.log('✅ Cambios guardados exitosamente en backend');
+
+            // ✅ Actualizar estado local
+            setDisponibilidadLocal(prev => ({
+                ...prev,
+                [idRestaurante]: cambios
+            }));
+
+            return true;
         } catch (error) {
             console.error('❌ Error guardando cambios de disponibilidad:', error);
             return false;
         }
-    };
+    }, [actualizarDisponibilidadPlato]);
 
-    // ✅ Función para forzar recarga manual - MEJORADA
+    // ✅ Verificar si un plato específico está disponible
+    const esPlatoDisponible = useCallback((
+        restauranteId: number,
+        platoId: number,
+        valorOriginal: boolean
+    ): boolean => {
+        return disponibilidadLocal[restauranteId]?.[platoId] ?? valorOriginal;
+    }, [disponibilidadLocal]);
+
+    // ✅ Forzar recarga de disponibilidad
     const forzarRecargaDisponibilidad = useCallback(async () => {
         console.log('🔄 Forzando recarga de disponibilidad...');
-        setIsLoadingDisponibilidad(true);
 
-        try {
-            // ✅ Resetear cache para forzar lectura
-            setLastLoadTime(0);
+        const restaurantesIds = restaurantesProcesados.map(r => r.idRestaurante);
+        const promises = restaurantesIds.map(id => obtenerDisponibilidadPlatos(id));
 
-            // ✅ Cargar inmediatamente
-            await cargarDisponibilidadLocal();
+        await Promise.all(promises);
+        console.log('✅ Recarga forzada completada');
+    }, [restaurantesProcesados, obtenerDisponibilidadPlatos]);
 
-            // ✅ Segunda carga para asegurar datos
-            setTimeout(async () => {
-                await cargarDisponibilidadLocal();
-            }, 100);
-
-            console.log('✅ Recarga forzada completada');
-        } catch (error) {
-            console.error('❌ Error en recarga forzada:', error);
-        } finally {
-            setIsLoadingDisponibilidad(false);
-        }
-    }, []);
-
-    // 🧹 Limpiar datos de disponibilidad (para desarrollo)
-    const limpiarDisponibilidad = async (): Promise<void> => {
-        try {
-            const keys = await AsyncStorage.getAllKeys();
-            const disponibilidadKeys = keys.filter(key => key.startsWith(STORAGE_KEY));
-
-            await AsyncStorage.multiRemove(disponibilidadKeys);
-            setDisponibilidadLocal({});
-            setLastLoadTime(0);
-
-            console.log('🧹 Disponibilidad local limpiada');
-        } catch (error) {
-            console.error('❌ Error limpiando disponibilidad:', error);
-        }
-    };
-
-    // ✅ NUEVA: Función para pre-cargar disponibilidad de un restaurante específico
-    const precargarDisponibilidadRestaurante = useCallback(async (restauranteId: number) => {
-        try {
-            console.log(`🚀 Pre-cargando disponibilidad para restaurante ${restauranteId}...`);
-
-            const key = `${STORAGE_KEY}${restauranteId}`;
-            const data = await AsyncStorage.getItem(key);
-
-            if (data) {
-                const disponibilidadRestaurante = JSON.parse(data);
-                setDisponibilidadLocal(prev => ({
-                    ...prev,
-                    [restauranteId]: disponibilidadRestaurante
-                }));
-
-                console.log(`✅ Disponibilidad pre-cargada para restaurante ${restauranteId}:`, disponibilidadRestaurante);
-            } else {
-                console.log(`ℹ️ No hay disponibilidad guardada para restaurante ${restauranteId}`);
-            }
-        } catch (error) {
-            console.error(`❌ Error pre-cargando restaurante ${restauranteId}:`, error);
-        }
-    }, [STORAGE_KEY]);
+    // ✅ Precargar disponibilidad de un restaurante específico
+    const precargarDisponibilidadRestaurante = useCallback(async (idRestaurante: number) => {
+        await obtenerDisponibilidadPlatos(idRestaurante);
+    }, [obtenerDisponibilidadPlatos]);
 
     // =============== RETURN ===============
     return {
         // Estados básicos
         restaurantesFiltrados,
         universidadSeleccionada,
-        isLoadingDisponibilidad,
+        isLoadingDisponibilidad: false,
 
         // Setters
         setUniversidadSeleccionada,
@@ -391,12 +214,10 @@ export const useRestaurantes = () => {
         obtenerDisponibilidadPlatos,
         guardarCambiosDisponibilidad,
         esPlatoDisponible,
-        forzarRecargaDisponibilidad, // Mejorada
-        precargarDisponibilidadRestaurante, // Nueva
-        limpiarDisponibilidad, // Para desarrollo
-        cargarDisponibilidadLocal: cargarDisponibilidadLocal, // Exponemos para uso manual
+        forzarRecargaDisponibilidad,
+        precargarDisponibilidadRestaurante,
 
         // Estado de disponibilidad (para debugging)
-        disponibilidadLocal, // Exponemos para ver qué datos tenemos
+        disponibilidadLocal,
     };
 };
