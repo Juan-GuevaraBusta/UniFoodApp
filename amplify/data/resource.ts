@@ -101,9 +101,9 @@ const schema = a.schema({
       restauranteEstado: a.string().required(),
     })
     .authorization((allow: any) => [
-      // ✅ CORREGIDO: Solo usar authenticated() sin owner()
+      // ✅ Permitir autenticados crear, leer y actualizar
       allow.authenticated().to(['create', 'read', 'update']),
-      // ✅ Los invitados pueden leer para casos específicos
+      // ✅ Permitir API Key para lectura (para casos de emergencia)
       allow.guest().to(['read']),
     ])
     // ✅ Índices secundarios para consultas eficientes

@@ -1,6 +1,8 @@
 // hooks/useAmplifyData.ts - Versión corregida para Gen 2 - COMPLETA
-import { generateClient } from 'aws-amplify/data';
 import type { Schema } from '@/amplify/data/resource';
+import { getRestaurantInfoByEmail } from '@/constants/userRoles';
+import { fetchAuthSession, getCurrentUser } from 'aws-amplify/auth';
+import { generateClient } from 'aws-amplify/data';
 import { useAuth } from './useAuth';
 
 // ✅ Cliente tipado de Gen 2 - usa el schema definido
@@ -39,20 +41,27 @@ export const useAmplifyData = () => {
 
     const verificarAutenticacion = async () => {
         try {
-            if (!isAuthenticated || !user?.email) {
-                throw new Error('Usuario no autenticado localmente');
+            // ✅ Verificar sesión directamente con AWS Amplify
+            const session = await fetchAuthSession();
+            if (!session.tokens?.accessToken) {
+                throw new Error('No hay tokens de acceso válidos');
             }
 
-            // ✅ Verificar que la sesión sigue activa
-            const currentUser = await verificarSesion();
+            // ✅ Verificar usuario actual
+            const currentUser = await getCurrentUser();
             if (!currentUser) {
-                throw new Error('Sesión expirada');
+                throw new Error('No hay usuario actual');
+            }
+
+            const email = currentUser.signInDetails?.loginId || '';
+            if (!email) {
+                throw new Error('No se pudo obtener el email del usuario');
             }
 
             console.log('✅ Usuario autenticado verificado:', {
-                email: user.email,
-                role: user.role,
-                isAuthenticated
+                email: email,
+                hasAccessToken: !!session.tokens?.accessToken,
+                hasIdToken: !!session.tokens?.idToken
             });
 
             return true;
@@ -78,16 +87,23 @@ export const useAmplifyData = () => {
             // ✅ Verificar autenticación ANTES de hacer la llamada
             await verificarAutenticacion();
 
+            // ✅ Obtener email del usuario autenticado
+            const currentUser = await getCurrentUser();
+            const userEmail = currentUser.signInDetails?.loginId || '';
+
+            if (!userEmail) {
+                return {
+                    success: false,
+                    error: 'No se pudo obtener el email del usuario'
+                };
+            }
+
             const primerItem = carritoItems[0];
             const restauranteId = primerItem.idRestaurante.toString();
             const universidadId = primerItem.universidadId;
             const subtotal = total - Math.round(total * 0.05);
             const tarifaServicio = Math.round(total * 0.05);
             const numeroOrden = generateShortOrderNumber();
-
-            if (!user?.email) {
-                throw new Error('No se pudo obtener el email del usuario');
-            }
 
             // ✅ CRÍTICO: Preparar itemsPedido como JSON string
             const itemsPedidoArray = carritoItems.map(item => ({
@@ -108,7 +124,7 @@ export const useAmplifyData = () => {
 
             const pedidoData = {
                 numeroOrden,
-                usuarioEmail: user.email,
+                usuarioEmail: userEmail,
                 restauranteId,
                 subtotal,
                 tarifaServicio,
@@ -130,7 +146,7 @@ export const useAmplifyData = () => {
                 restauranteId,
                 universidadId,
                 total,
-                userEmail: user.email,
+                userEmail: userEmail,
                 itemsCount: itemsPedidoArray.length,
                 itemsPedidoType: typeof pedidoData.itemsPedido
             });
@@ -206,14 +222,20 @@ export const useAmplifyData = () => {
     // ✅ OBTENER PEDIDOS - Adaptado para Gen 2 con parsing JSON
     const obtenerPedidosRestaurante = async (restauranteId: number, estado?: string): Promise<PedidosResult> => {
         try {
-            if (!user?.restaurantInfo) {
+            // ✅ Verificar autenticación primero
+            await verificarAutenticacion();
+
+            // ✅ Obtener información del restaurante del usuario autenticado
+            const currentUser = await getCurrentUser();
+            const userEmail = currentUser.signInDetails?.loginId || '';
+            const restaurantInfo = getRestaurantInfoByEmail(userEmail);
+
+            if (!restaurantInfo) {
                 return {
                     success: false,
                     error: 'No eres dueño de un restaurante'
                 };
             }
-
-            await verificarAutenticacion();
 
             console.log('📋 Obteniendo pedidos con Gen 2:', {
                 restauranteId,
@@ -295,7 +317,7 @@ export const useAmplifyData = () => {
             return {
                 success: true,
                 pedidos: pedidosOrdenados,
-                restaurantInfo: user.restaurantInfo
+                restaurantInfo: restaurantInfo
             };
 
         } catch (error: any) {
@@ -320,14 +342,20 @@ export const useAmplifyData = () => {
     // ✅ ACTUALIZAR ESTADO - Adaptado para Gen 2
     const actualizarEstadoPedido = async (pedidoId: string, nuevoEstado: string, comentarios?: string): Promise<UpdateResult> => {
         try {
-            if (!user?.restaurantInfo) {
+            // ✅ Verificar autenticación primero
+            await verificarAutenticacion();
+
+            // ✅ Obtener información del restaurante del usuario autenticado
+            const currentUser = await getCurrentUser();
+            const userEmail = currentUser.signInDetails?.loginId || '';
+            const restaurantInfo = getRestaurantInfoByEmail(userEmail);
+
+            if (!restaurantInfo) {
                 return {
                     success: false,
                     error: 'No autorizado'
                 };
             }
-
-            await verificarAutenticacion();
 
             console.log('🔄 Actualizando pedido con Gen 2:', { pedidoId, nuevoEstado });
 
@@ -423,20 +451,25 @@ export const useAmplifyData = () => {
     // ✅ OBTENER MIS PEDIDOS - Adaptado para Gen 2 con parsing JSON
     const obtenerMisPedidos = async (): Promise<PedidosResult> => {
         try {
-            if (!user?.email) {
+            // ✅ Verificar autenticación primero
+            await verificarAutenticacion();
+
+            // ✅ Obtener email del usuario autenticado
+            const currentUser = await getCurrentUser();
+            const userEmail = currentUser.signInDetails?.loginId || '';
+
+            if (!userEmail) {
                 return {
                     success: false,
-                    error: 'Usuario no autenticado'
+                    error: 'No se pudo obtener el email del usuario'
                 };
             }
-
-            await verificarAutenticacion();
 
             // ✅ Obtener pedidos del usuario usando Gen 2
             const { data: pedidos, errors } = await client.models.Pedido.list({
                 filter: {
                     usuarioEmail: {
-                        eq: user.email
+                        eq: userEmail
                     }
                 }
             });
