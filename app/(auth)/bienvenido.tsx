@@ -1,17 +1,33 @@
 /* eslint-disable prettier/prettier */
+import BotonCustom from "@/components/botonCustom";
+import { useAuth } from "@/hooks/useAuth";
 import { router } from "expo-router";
-import { useRef, useState } from "react";
-import { Text, TouchableOpacity, View, Image } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import { Image, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Swiper from "react-native-swiper";
 import { menuPrincipal } from "../../constants/index";
-import BotonCustom from "@/components/botonCustom";
 
 
 const MenuInicio = () => {
     const swiperRef = useRef<Swiper>(null);
     const [activeIndex, setActiveIndex] = useState(0);
     const isLastSlide = activeIndex === menuPrincipal.length - 1;
+    const { user, isAuthenticated } = useAuth();
+
+    // ✅ Redirección automática si ya está autenticado
+    useEffect(() => {
+        if (isAuthenticated && user) {
+            console.log('🚀 Usuario ya autenticado, redirigiendo al home...');
+
+            // Redirigir según el rol del usuario
+            if (user.role === 'restaurant_owner') {
+                router.replace('/(restaurant)/(tabs)/home');
+            } else {
+                router.replace('/(root)/(tabs)/home');
+            }
+        }
+    }, [isAuthenticated, user]);
     return (
         <SafeAreaView className="flex h-full items-center justify-between bg-white">
             <TouchableOpacity
@@ -22,7 +38,7 @@ const MenuInicio = () => {
             >
                 <Text className="text-black text-base font-JakartaBold">Saltar</Text>
             </TouchableOpacity>
-            
+
             <Swiper ref={swiperRef}
                 loop={false}
                 dot={<View className="w-[32px] h-[8px] mx-1 bg-[#E2E8F0] rounded-full" />}
@@ -33,7 +49,7 @@ const MenuInicio = () => {
                     <View key={item.id} className="flex-1 items-center p-5">
 
                         <View className="h-[10%] justify-center items-center w-full">
-                            <Text className="text-black text-3xl font-JakartaBold text-center">                              
+                            <Text className="text-black text-3xl font-JakartaBold text-center">
                                 {item.title}
                             </Text>
                         </View>
@@ -54,7 +70,7 @@ const MenuInicio = () => {
 
                     </View>
                 ))}
-                </Swiper>
+            </Swiper>
             <BotonCustom
                 title={isLastSlide ? "¡Empieza ya!" : "Siguiente"}
                 onPress={() => isLastSlide ? router.replace('/(auth)/iniciaSesion') : swiperRef.current?.scrollBy(1)}

@@ -1,13 +1,13 @@
-import 'react-native-get-random-values';
+import { CarritoProvider } from '@/context/contextCarrito';
+import '@/global.css';
 import { Amplify } from 'aws-amplify';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
+import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState } from 'react';
-import { View, Image } from 'react-native';
-import { CarritoProvider } from '@/context/contextCarrito';
-import '@/global.css';
+import { Image, View } from 'react-native';
+import 'react-native-get-random-values';
 
 // Hook personalizado para configurar Amplify
 const useAmplifyConfig = () => {
@@ -92,10 +92,10 @@ export default function RootLayout() {
         <Image
           source={require('../assets/images/splash.png')}
           style={{
-            width: '120%',
-            height: '100%',
+            width: '24%', // 120% / 5 = 24%
+            height: '20%', // 100% / 5 = 20%
           }}
-          resizeMode="cover"
+          resizeMode="contain"
         />
       </View>
     );

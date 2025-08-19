@@ -1,7 +1,7 @@
 // hooks/useAuth.ts - Con verificación mejorada para Gen 2
-import { useState, useEffect } from 'react';
-import { signUp, signIn, confirmSignUp, signOut, getCurrentUser, fetchAuthSession } from 'aws-amplify/auth';
-import { getUserRoleByEmail, getRestaurantInfoByEmail, type RestaurantInfo } from '@/constants/userRoles';
+import { getRestaurantInfoByEmail, getUserRoleByEmail, type RestaurantInfo } from '@/constants/userRoles';
+import { confirmSignUp, fetchAuthSession, getCurrentUser, signIn, signOut, signUp } from 'aws-amplify/auth';
+import { useEffect, useState } from 'react';
 
 export interface AuthUser {
     username: string;
@@ -20,6 +20,11 @@ export const useAuth = () => {
         verificarSesionInicial();
     }, []);
 
+    // ✅ Verificar persistencia de sesión al cargar la app
+    useEffect(() => {
+        verificarPersistenciaSesion();
+    }, []);
+
     // ✅ Verificación inicial silenciosa
     const verificarSesionInicial = async () => {
         try {
@@ -33,6 +38,34 @@ export const useAuth = () => {
         } catch (error) {
             // Silencioso - no hay sesión activa
             console.log('ℹ️ No hay sesión activa');
+        }
+    };
+
+    // ✅ Verificar persistencia de sesión
+    const verificarPersistenciaSesion = async () => {
+        try {
+            console.log('🔍 Verificando persistencia de sesión...');
+
+            // Verificar si hay una sesión válida
+            const session = await fetchAuthSession();
+
+            if (session.tokens?.accessToken) {
+                const currentUser = await getCurrentUser();
+                if (currentUser) {
+                    const email = currentUser.signInDetails?.loginId || '';
+                    const authUser = createAuthUser(currentUser, email);
+                    setUser(authUser);
+                    console.log('✅ Sesión persistente restaurada:', email);
+                    return true;
+                }
+            }
+
+            console.log('ℹ️ No hay sesión persistente');
+            return false;
+
+        } catch (error) {
+            console.log('ℹ️ No hay sesión persistente (error):', error);
+            return false;
         }
     };
 
