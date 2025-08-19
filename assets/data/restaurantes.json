@@ -4,7 +4,7 @@
         "idUniversidad": 1,
         "nombreRestaurante": "Wonka",
         "imagen": "icesi",
-        "calificacionRestaurante": 4.5,
+        "calificacionRestaurante": 5.0,
         "tiempoEntrega": "20",
         "categorias": [
             "Salchipapa",
@@ -225,98 +225,46 @@
     {
         "idRestaurante": 2,
         "idUniversidad": 1,
-        "nombreRestaurante": "Bristo Saman",
+        "nombreRestaurante": "Caffesabor",
         "imagen": "icesi",
-        "calificacionRestaurante": 4.5,
-        "tiempoEntrega": "20",
+        "calificacionRestaurante": 5.0,
+        "tiempoEntrega": "15",
         "categorias": [
-            "Bowls",
-            "Pastas",
-            "Ensaladas"
+            "Desayunos",
+            "Panadería",
+            "Almuerzos"
         ],
         "menu": [
             {
                 "idPlato": 1,
-                "nombre": "Bowl de Carne",
-                "descripcion": "Bowl con arroz, carne molida, maicitos, pico de gallo y frijoles",
-                "precio": 17000,
-                "categoria": "Bowl",
+                "nombre": "Combo Huevos, Croissant, Café Latte",
+                "descripcion": "Delicioso desayuno con huevos, croissant y café latte",
+                "precio": 10000,
+                "categoria": "Desayunos",
                 "imagen": "bowlPrueba",
                 "disponible": true,
-                "tipoPlato": "personalizable",
+                "tipoPlato": "simple",
                 "toppingsBase": [],
-                "toppingsDisponibles": [
-                    {
-                        "id": 1,
-                        "nombre": "Arroz blanco",
-                        "precio": 2000
-                    },
-                    {
-                        "id": 2,
-                        "nombre": "Carne molida",
-                        "precio": 4000
-                    },
-                    {
-                        "id": 3,
-                        "nombre": "Frijoles",
-                        "precio": 2500
-                    },
-                    {
-                        "id": 4,
-                        "nombre": "Maíz",
-                        "precio": 1500
-                    },
-                    {
-                        "id": 5,
-                        "nombre": "Pico de gallo",
-                        "precio": 1000
-                    },
-                    {
-                        "id": 6,
-                        "nombre": "Aguacate",
-                        "precio": 3000
-                    }
-                ]
+                "toppingsDisponibles": []
             },
             {
                 "idPlato": 2,
-                "nombre": "Pasta Pesto",
-                "descripcion": "Spaghettis con Salsa Pesto acompañados de Queso parmesano",
-                "precio": 15000,
-                "categoria": "Pasta",
+                "nombre": "Combo Huevos, Arepa, Chocolate",
+                "descripcion": "Delicioso desayuno con huevos, arepa y chocolate",
+                "precio": 10000,
+                "categoria": "Desayunos",
                 "imagen": "bowlPrueba",
                 "disponible": true,
-                "tipoPlato": "fijo",
-                "toppingsBase": [
-                    {
-                        "id": 1,
-                        "nombre": "Spaghetti",
-                        "removible": false
-                    },
-                    {
-                        "id": 2,
-                        "nombre": "Salsa pesto",
-                        "removible": false
-                    },
-                    {
-                        "id": 3,
-                        "nombre": "Queso parmesano",
-                        "removible": true
-                    },
-                    {
-                        "id": 4,
-                        "nombre": "Albahaca fresca",
-                        "removible": true
-                    }
-                ],
+                "tipoPlato": "simple",
+                "toppingsBase": [],
                 "toppingsDisponibles": []
             },
             {
                 "idPlato": 3,
-                "nombre": "Coca Cola 400mL",
-                "descripcion": "Bebida gaseosa refrescante",
-                "precio": 3800,
-                "categoria": "bebidas",
+                "nombre": "Calentado",
+                "descripcion": "Delicioso Calentado con Arroz y Maduritos",
+                "precio": 8000,
+                "categoria": "Desayunos",
                 "imagen": "bowlPrueba",
                 "disponible": true,
                 "tipoPlato": "simple",
@@ -325,10 +273,214 @@
             },
             {
                 "idPlato": 4,
-                "nombre": "jugo hit grande",
-                "descripcion": "Jugo de frutas naturales",
-                "precio": 2800,
-                "categoria": "bebidas",
+                "nombre": "Huevos con Salchicha",
+                "descripcion": "Delicioso desayuno con huevos y salchicha",
+                "precio": 8000,
+                "categoria": "Desayunos",
+                "imagen": "bowlPrueba",
+                "disponible": true,
+                "tipoPlato": "simple",
+                "toppingsBase": [],
+                "toppingsDisponibles": []
+            },
+            {
+                "idPlato": 5,
+                "nombre": "Huevos con arroz",
+                "descripcion": "Delicioso desayuno con huevos y arroz",
+                "precio": 6500,
+                "categoria": "Desayunos",
+                "imagen": "bowlPrueba",
+                "disponible": true,
+                "tipoPlato": "simple",
+                "toppingsBase": [],
+                "toppingsDisponibles": []
+            },
+            {
+                "idPlato": 6,
+                "nombre": "Omelette Jamón y Queso",
+                "descripcion": "Delicioso desayuno con huevos y jamón y queso",
+                "precio": 7800,
+                "categoria": "Desayunos",
+                "imagen": "bowlPrueba",
+                "disponible": true,
+                "tipoPlato": "simple",
+                "toppingsBase": [],
+                "toppingsDisponibles": []
+            },
+            {
+                "idPlato": 7,
+                "nombre": "Omelette Maduro con Tocineta",
+                "descripcion": "Delicioso desayuno con huevos, maduro y tocineta",
+                "precio": 9500,
+                "categoria": "Desayunos",
+                "imagen": "bowlPrueba",
+                "disponible": true,
+                "tipoPlato": "simple",
+                "toppingsBase": [],
+                "toppingsDisponibles": []
+            },
+            {
+                "idPlato": 8,
+                "nombre": "Omelette Tomate Queso",
+                "descripcion": "Delicioso desayuno con huevos, tomate y queso",
+                "precio": 7800,
+                "categoria": "Desayunos",
+                "imagen": "bowlPrueba",
+                "disponible": true,
+                "tipoPlato": "simple",
+                "toppingsBase": [],
+                "toppingsDisponibles": []
+            },
+            {
+                "idPlato": 9,
+                "nombre": "Dedo de Queso",
+                "descripcion": "",
+                "precio": 4200,
+                "categoria": "Panadería",
+                "imagen": "bowlPrueba",
+                "disponible": true,
+                "tipoPlato": "simple",
+                "toppingsBase": [],
+                "toppingsDisponibles": []
+            },
+            {
+                "idPlato": 10,
+                "nombre": "Dedo Jamón y Queso",
+                "descripcion": "",
+                "precio": 4500,
+                "categoria": "Panadería",
+                "imagen": "bowlPrueba",
+                "disponible": true,
+                "tipoPlato": "simple",
+                "toppingsBase": [],
+                "toppingsDisponibles": []
+            },
+            {
+                "idPlato": 11,
+                "nombre": "Dedo Hawaiano",
+                "descripcion": "",
+                "precio": 4900,
+                "categoria": "Panadería",
+                "imagen": "bowlPrueba",
+                "disponible": true,
+                "tipoPlato": "simple",
+                "toppingsBase": [],
+                "toppingsDisponibles": []
+            },
+            {
+                "idPlato": 12,
+                "nombre": "Pandebono",
+                "descripcion": "",
+                "precio": 2600,
+                "categoria": "Panadería",
+                "imagen": "bowlPrueba",
+                "disponible": true,
+                "tipoPlato": "simple",
+                "toppingsBase": [],
+                "toppingsDisponibles": []
+            },
+            {
+                "idPlato": 13,
+                "nombre": "Pastel de Hojaldre",
+                "descripcion": "",
+                "precio": 6000,
+                "categoria": "Panadería",
+                "imagen": "bowlPrueba",
+                "disponible": true,
+                "tipoPlato": "simple",
+                "toppingsBase": [],
+                "toppingsDisponibles": []
+            },
+            {
+                "idPlato": 14,
+                "nombre": "Chicharron",
+                "descripcion": "",
+                "precio": 4500,
+                "categoria": "Panadería",
+                "imagen": "bowlPrueba",
+                "disponible": true,
+                "tipoPlato": "simple",
+                "toppingsBase": [],
+                "toppingsDisponibles": []
+            },
+            {
+                "idPlato": 15,
+                "nombre": "Croissant",
+                "descripcion": "",
+                "precio": 3000,
+                "categoria": "Panadería",
+                "imagen": "bowlPrueba",
+                "disponible": true,
+                "tipoPlato": "simple",
+                "toppingsBase": [],
+                "toppingsDisponibles": []
+            },
+            {
+                "idPlato": 16,
+                "nombre": "Arepa",
+                "descripcion": "",
+                "precio": 3500,
+                "categoria": "Panadería",
+                "imagen": "bowlPrueba",
+                "disponible": true,
+                "tipoPlato": "simple",
+                "toppingsBase": [],
+                "toppingsDisponibles": []
+            },
+            {
+                "idPlato": 17,
+                "nombre": "Rollo de Canela 80gr",
+                "descripcion": "",
+                "precio": 4200,
+                "categoria": "Panadería",
+                "imagen": "bowlPrueba",
+                "disponible": true,
+                "tipoPlato": "simple",
+                "toppingsBase": [],
+                "toppingsDisponibles": []
+            },
+            {
+                "idPlato": 18,
+                "nombre": "Muffin & Cake",
+                "descripcion": "",
+                "precio": 5700,
+                "categoria": "Panadería",
+                "imagen": "bowlPrueba",
+                "disponible": true,
+                "tipoPlato": "simple",
+                "toppingsBase": [],
+                "toppingsDisponibles": []
+            },
+            {
+                "idPlato": 19,
+                "nombre": "Arepa Gratinada",
+                "descripcion": "",
+                "precio": 6500,
+                "categoria": "Panadería",
+                "imagen": "bowlPrueba",
+                "disponible": true,
+                "tipoPlato": "simple",
+                "toppingsBase": [],
+                "toppingsDisponibles": []
+            },
+            {
+                "idPlato": 20,
+                "nombre": "Pastel de Pollo y Tocineta",
+                "descripcion": "",
+                "precio": 6500,
+                "categoria": "Panadería",
+                "imagen": "bowlPrueba",
+                "disponible": true,
+                "tipoPlato": "simple",
+                "toppingsBase": [],
+                "toppingsDisponibles": []
+            },
+            {
+                "idPlato": 21,
+                "nombre": "Estrella de Chocolate",
+                "descripcion": "",
+                "precio": 3500,
+                "categoria": "Panadería",
                 "imagen": "bowlPrueba",
                 "disponible": true,
                 "tipoPlato": "simple",
