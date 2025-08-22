@@ -20,7 +20,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "dev.unifud.app",
-      "buildNumber": "1",
+      "buildNumber": "39",
       "splash": {
         "image": "./assets/images/splash.png",
         "resizeMode": "contain",
@@ -69,7 +69,14 @@
       "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/notification-icon.png",
+          "color": "#ffffff"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

@@ -1,16 +1,16 @@
 /* eslint-disable prettier/prettier */
 // app/(root)/(restaurants)/pagoPlato.tsx - VERSIÓN PRODUCCIÓN CON GRAPHQL REAL - CORREGIDO
-import { Text, TouchableOpacity, View, ScrollView, Image, Alert, ActivityIndicator } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { router, useLocalSearchParams } from 'expo-router';
+import type { Schema } from '@/amplify/data/resource';
 import { useCarrito } from '@/context/contextCarrito';
 import { useAuth } from "@/hooks/useAuth";
+import { useNotifications } from "@/hooks/useNotifications";
+import { fetchAuthSession, getCurrentUser } from 'aws-amplify/auth';
 import { generateClient } from 'aws-amplify/data';
-import type { Schema } from '@/amplify/data/resource';
-import { getCurrentUser, fetchAuthSession } from 'aws-amplify/auth';
+import { router, Stack, useLocalSearchParams } from 'expo-router';
+import { ArrowLeft, CheckCircle, Clock, CreditCard, MapPin, User } from "lucide-react-native";
 import { useState } from 'react';
-import { Stack } from "expo-router";
-import { ArrowLeft, CreditCard, CheckCircle, Clock, MapPin, User } from "lucide-react-native";
+import { ActivityIndicator, Alert, Image, ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 // ✅ Cliente GraphQL tipado para producción
 const client = generateClient<Schema>();
@@ -27,6 +27,7 @@ const PagoPlato = () => {
     } = useCarrito();
 
     const { user } = useAuth();
+    const { sendLocalNotification } = useNotifications();
 
     // Función para formatear precio
     const formatearPrecio = (precio: number) => {
@@ -272,6 +273,18 @@ const PagoPlato = () => {
 
             if (resultado.success) {
                 console.log('✅ PRODUCCIÓN - Pedido creado exitosamente:', resultado);
+
+                // ✅ Enviar notificación al usuario cuando se crea el pedido
+                sendLocalNotification(
+                    '🍽️ ¡Pedido Creado Exitosamente!',
+                    `Tu pedido #${resultado.numeroOrden} ha sido enviado a ${restauranteInfo.nombreRestaurante}. El restaurante recibirá la notificación.`,
+                    {
+                        type: 'order_created',
+                        orderNumber: resultado.numeroOrden,
+                        restaurantName: restauranteInfo.nombreRestaurante,
+                        target: 'user'
+                    }
+                );
 
                 Alert.alert(
                     '🎉 ¡Pedido realizado exitosamente!',

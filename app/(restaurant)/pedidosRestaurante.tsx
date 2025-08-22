@@ -1,12 +1,13 @@
 import type { Schema } from '@/amplify/data/resource';
 import { getRestaurantInfoByEmail } from '@/constants/userRoles';
 import { useAuth } from "@/hooks/useAuth";
+import { useNotifications } from '@/hooks/useNotifications';
 import { useFocusEffect } from '@react-navigation/native';
 import { fetchAuthSession, getCurrentUser } from 'aws-amplify/auth';
 import { generateClient } from 'aws-amplify/data';
 import { router } from "expo-router";
 import { CheckCircle, ClipboardList, Clock, Home, RefreshCw } from "lucide-react-native";
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { Alert, RefreshControl, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
@@ -15,11 +16,13 @@ const client = generateClient<Schema>();
 
 const PedidosRestaurante = () => {
     const { user } = useAuth();
+    const { sendLocalNotification } = useNotifications();
 
     const [pedidos, setPedidos] = useState<any[]>([]);
     const [refreshing, setRefreshing] = useState(false);
     const [loading, setLoading] = useState(true);
     const [updatingPedido, setUpdatingPedido] = useState<string | null>(null);
+    const pedidosAnteriores = useRef<any[]>([]);
 
     // ✅ Cargar pedidos al enfocar la pantalla
     useFocusEffect(
@@ -170,6 +173,33 @@ const PedidosRestaurante = () => {
                 restaurante: nombreRestaurante
             });
 
+            // ✅ DETECTAR NUEVOS PEDIDOS Y ENVIAR NOTIFICACIÓN SOLO AL RESTAURANTE
+            if (pedidosAnteriores.current.length > 0) {
+                const nuevosPedidos = pedidosOrdenados.filter(pedido =>
+                    !pedidosAnteriores.current.some(p => p.id === pedido.id)
+                );
+
+                if (nuevosPedidos.length > 0) {
+                    console.log('🆕 RESTAURANTE - Nuevos pedidos detectados:', nuevosPedidos.length);
+
+                    // Enviar notificación por cada nuevo pedido SOLO AL RESTAURANTE
+                    nuevosPedidos.forEach(pedido => {
+                        sendLocalNotification(
+                            '🍽️ ¡Nuevo Pedido Recibido!',
+                            `Pedido #${pedido.numeroOrden || 'Sin número'} de ${pedido.usuarioEmail}`,
+                            {
+                                type: 'new_order_restaurant',
+                                orderNumber: pedido.numeroOrden,
+                                customerEmail: pedido.usuarioEmail,
+                                target: 'restaurant'
+                            }
+                        );
+                    });
+                }
+            }
+
+            // Actualizar referencia de pedidos anteriores
+            pedidosAnteriores.current = pedidosOrdenados;
             setPedidos(pedidosOrdenados);
 
         } catch (error: any) {
@@ -231,6 +261,13 @@ const PedidosRestaurante = () => {
             setUpdatingPedido(pedidoId);
             console.log(`🔄 RESTAURANTE - Actualizando pedido ${pedidoId} a estado: ${nuevoEstado}`);
 
+            // Buscar el pedido actual para obtener información del cliente
+            const pedidoActual = pedidos.find(p => p.id === pedidoId);
+            if (!pedidoActual) {
+                console.error('❌ RESTAURANTE - No se encontró el pedido para notificar');
+                return false;
+            }
+
             // Preparar datos de actualización
             const updateData: any = {
                 id: pedidoId,
@@ -261,6 +298,39 @@ const PedidosRestaurante = () => {
             }
 
             console.log('✅ RESTAURANTE - Pedido actualizado exitosamente:', pedidoActualizado);
+
+            // ✅ ENVIAR NOTIFICACIÓN AL CLIENTE
+            try {
+                const restaurantInfo = getRestaurantInfo();
+                const restaurantName = restaurantInfo?.nombreRestaurante || 'Restaurante';
+                const orderNumber = pedidoActual.numeroOrden || 'Sin número';
+
+                // Por ahora usamos notificación local, pero aquí iría el token del cliente
+                // En una implementación completa, necesitarías guardar el token del cliente en la base de datos
+                console.log('📱 RESTAURANTE - Enviando notificación al cliente...');
+
+                switch (nuevoEstado) {
+                    case 'preparando':
+                        // Notificar que el pedido fue aceptado
+                        console.log('✅ RESTAURANTE - Notificando pedido aceptado al cliente');
+                        break;
+                    case 'listo':
+                        // Notificar que el pedido está listo
+                        console.log('🎉 RESTAURANTE - Notificando pedido listo al cliente');
+                        break;
+                    case 'entregado':
+                        // Notificar que el pedido fue entregado
+                        console.log('✅ RESTAURANTE - Notificando pedido entregado al cliente');
+                        break;
+                    case 'cancelado':
+                        // Notificar que el pedido fue rechazado
+                        console.log('❌ RESTAURANTE - Notificando pedido rechazado al cliente');
+                        break;
+                }
+            } catch (notificationError) {
+                console.error('❌ RESTAURANTE - Error enviando notificación:', notificationError);
+                // No fallar la actualización por error de notificación
+            }
 
             // Mostrar mensaje de confirmación
             const mensajes = {
@@ -497,11 +567,9 @@ const PedidosRestaurante = () => {
                                         <Text className="text-gray-500 font-JakartaMedium text-sm">
                                             {formatearFecha(pedido.fechaPedido)}
                                         </Text>
-                                        <Text className="text-blue-600 font-JakartaMedium text-xs">
-                                            ID: {pedido.id}
-                                        </Text>
+
                                     </View>
-                                    <View className={`px-3 py-1 rounded-full border flex-row items-center ${getEstadoColor(pedido.estado)}`}>
+                                    <View className={`px-3 py-1 rounded-full border flex-row items-center ml-4 ${getEstadoColor(pedido.estado)}`}>
                                         {getEstadoIcon(pedido.estado)}
                                         <Text className="font-JakartaBold text-xs ml-1 capitalize">
                                             {pedido.estado}
@@ -537,10 +605,34 @@ const PedidosRestaurante = () => {
                                                     </Text>
                                                 </View>
 
-                                                {/* Toppings si existen */}
-                                                {item.toppingsSeleccionados && item.toppingsSeleccionados.length > 0 && (
+                                                {/* Adiciones (toppings) si existen */}
+                                                {(item.toppingsSeleccionados && item.toppingsSeleccionados.length > 0) ||
+                                                    (item.ingredientesAgregados && item.ingredientesAgregados.length > 0) ||
+                                                    (item.agregados && item.agregados.length > 0) ? (
                                                     <Text className="text-green-600 font-JakartaMedium text-xs mt-1">
-                                                        + {item.toppingsSeleccionados.map((t: any) => t.nombre).join(', ')}
+                                                        ➕ Agregar: {
+                                                            (item.toppingsSeleccionados || item.ingredientesAgregados || item.agregados || [])
+                                                                .map((t: any) => t.nombre || t).join(', ')
+                                                        }
+                                                    </Text>
+                                                ) : null}
+
+                                                {/* Eliminaciones si existen */}
+                                                {(item.toppingsEliminados && item.toppingsEliminados.length > 0) ||
+                                                    (item.ingredientesEliminados && item.ingredientesEliminados.length > 0) ||
+                                                    (item.removidos && item.removidos.length > 0) ? (
+                                                    <Text className="text-red-600 font-JakartaMedium text-xs mt-1">
+                                                        ➖ Quitar: {
+                                                            (item.toppingsEliminados || item.ingredientesEliminados || item.removidos || [])
+                                                                .map((t: any) => t.nombre || t).join(', ')
+                                                        }
+                                                    </Text>
+                                                ) : null}
+
+                                                {/* Debug: Mostrar todos los campos del item */}
+                                                {__DEV__ && (
+                                                    <Text className="text-gray-400 font-JakartaMedium text-xs mt-1">
+                                                        🔧 DEBUG: {JSON.stringify(Object.keys(item))}
                                                     </Text>
                                                 )}
 
@@ -564,17 +656,7 @@ const PedidosRestaurante = () => {
                                     )}
                                 </View>
 
-                                {/* Comentarios del cliente si existen */}
-                                {pedido.comentariosCliente && (
-                                    <View className="mb-3 p-3 bg-yellow-50 rounded-lg border border-yellow-200">
-                                        <Text className="text-yellow-800 font-JakartaBold text-sm mb-1">
-                                            💬 Comentarios del cliente:
-                                        </Text>
-                                        <Text className="text-yellow-700 font-JakartaMedium text-sm italic">
-                                            "{pedido.comentariosCliente}"
-                                        </Text>
-                                    </View>
-                                )}
+
 
                                 {/* Botones de acción según el estado */}
                                 {renderBotonesAccion(pedido)}

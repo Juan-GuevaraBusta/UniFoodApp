@@ -1,5 +1,7 @@
 import { CarritoProvider } from '@/context/contextCarrito';
 import '@/global.css';
+// import { useBackgroundPedidosMonitor } from '@/hooks/useBackgroundPedidosMonitor';
+// import { useNotifications } from '@/hooks/useNotifications';
 import { Amplify } from 'aws-amplify';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
@@ -61,6 +63,13 @@ SplashScreen.preventAutoHideAsync();
 export default function RootLayout() {
   const [showCustomSplash, setShowCustomSplash] = useState(true);
   const { isAmplifyConfigured, configError } = useAmplifyConfig();
+  // const { expoPushToken } = useNotifications();
+
+  // ✅ Inicializar monitoreo en segundo plano para notificaciones de pedidos
+  // const { isMonitoring } = useBackgroundPedidosMonitor();
+
+  // ✅ Debug: Log del estado del monitoreo
+  // console.log('🔍 LAYOUT - Estado del monitoreo en segundo plano:', isMonitoring);
 
   const [loaded, error] = useFonts({
     'Jakarta-Bold': require('../assets/fonts/PlusJakartaSans-Bold.ttf'),

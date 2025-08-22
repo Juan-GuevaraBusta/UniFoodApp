@@ -150,7 +150,8 @@ export const useDisponibilidad = () => {
                     restauranteId,
                     disponible,
                     fechaActualizacion: new Date().toISOString(),
-                    comentario: comentario || undefined
+                    comentario: comentario || undefined,
+                    restaurantePlato: `${restauranteId}#${platoId}`
                 };
 
                 console.log('🔍 Intentando guardar en backend con datos:', disponibilidadData);

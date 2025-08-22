@@ -4,7 +4,7 @@ import { useFocusEffect } from '@react-navigation/native';
 import { fetchAuthSession, getCurrentUser } from 'aws-amplify/auth';
 import { generateClient } from 'aws-amplify/data';
 import { router } from "expo-router";
-import { CheckCircle, ClipboardList, Clock, Home, RefreshCw } from "lucide-react-native";
+import { Bell, CheckCircle, ClipboardList, Clock, Home, RefreshCw } from "lucide-react-native";
 import { useCallback, useState } from "react";
 import { Alert, RefreshControl, ScrollView, Text, TouchableOpacity, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -14,6 +14,9 @@ const client = generateClient<Schema>();
 
 const PedidosActivos = () => {
     const { user } = useAuth();
+    // ✅ Comentado temporalmente para evitar conflictos
+    // const { isMonitoring, iniciarMonitoreo, detenerMonitoreo } = usePedidosMonitor();
+    const isMonitoring = false; // Temporal
 
     const [pedidos, setPedidos] = useState<any[]>([]);
     const [refreshing, setRefreshing] = useState(false);
@@ -24,8 +27,22 @@ const PedidosActivos = () => {
         useCallback(() => {
             console.log(' USUARIO - Pantalla pedidos activos enfocada, cargando pedidos...');
             cargarPedidosActivos();
-        }, [])
+
+            // ✅ Comentado temporalmente para evitar conflictos
+            // if (user?.email) {
+            //     console.log('🔔 USUARIO - Iniciando monitoreo de notificaciones...');
+            //     iniciarMonitoreo();
+            // }
+        }, [user?.email])
     );
+
+    // ✅ Comentado temporalmente para evitar conflictos
+    // useEffect(() => {
+    //     return () => {
+    //         console.log('🔔 USUARIO - Deteniendo monitoreo de notificaciones...');
+    //         detenerMonitoreo();
+    //     };
+    // }, []);
 
     // ✅ FUNCIÓN: Cargar pedidos activos del usuario
     const cargarPedidosActivos = async () => {
@@ -231,12 +248,20 @@ const PedidosActivos = () => {
                             Estado de tus pedidos
                         </Text>
                     </View>
-                    <TouchableOpacity
-                        onPress={onRefresh}
-                        className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center"
-                    >
-                        <RefreshCw size={20} color="#3B82F6" />
-                    </TouchableOpacity>
+                    <View className="flex-row space-x-2">
+                        <TouchableOpacity
+                            onPress={() => router.push("/(root)/testNotifications")}
+                            className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center"
+                        >
+                            <Bell size={20} color="#8B5CF6" />
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                            onPress={onRefresh}
+                            className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center"
+                        >
+                            <RefreshCw size={20} color="#3B82F6" />
+                        </TouchableOpacity>
+                    </View>
                 </View>
 
                 {/* Contador */}
@@ -247,6 +272,14 @@ const PedidosActivos = () => {
                     <Text className="text-blue-600 font-JakartaMedium text-sm text-center mt-1">
                         {user?.email || 'Usuario'}
                     </Text>
+
+                    {/* Indicador de monitoreo */}
+                    <View className="flex-row items-center justify-center mt-2">
+                        <Bell size={16} color={isMonitoring ? "#059669" : "#6B7280"} />
+                        <Text className={`font-JakartaMedium text-xs ml-1 ${isMonitoring ? 'text-green-600' : 'text-gray-500'}`}>
+                            {isMonitoring ? '🔔 Monitoreo activo' : '🔕 Monitoreo inactivo'}
+                        </Text>
+                    </View>
                 </View>
             </View>
 

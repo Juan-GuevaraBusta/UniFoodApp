@@ -1,13 +1,12 @@
 /* eslint-disable prettier/prettier */
 // app/(root)/(tabs)/home.tsx - VERSIÓN CORREGIDA
-import { Text, TouchableOpacity, View, FlatList, ImageBackground, RefreshControl } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { router } from 'expo-router';
-import { useState } from 'react';
-import { useFocusEffect } from '@react-navigation/native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useCallback } from 'react';
 import { useRestaurantes } from '@/hooks/useRestaurantes';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from '@react-navigation/native';
+import { router } from 'expo-router';
+import { useCallback, useState } from 'react';
+import { FlatList, ImageBackground, RefreshControl, Text, TouchableOpacity, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 const Home = () => {
   const [universidadActual, setUniversidadActual] = useState('ICESI');
@@ -212,17 +211,7 @@ const Home = () => {
                         {item.categorias.join(' • ')}
                       </Text>
 
-                      {/* ✅ Mostrar información de disponibilidad */}
-                      <Text style={{
-                        fontSize: 12,
-                        color: '#FFFFFF',
-                        marginTop: 2,
-                        textShadowColor: 'rgba(0,0,0,0.8)',
-                        textShadowOffset: { width: 1, height: 1 },
-                        textShadowRadius: 1
-                      }}>
-                        {platosDisponibles} de {platosTotal} platos disponibles
-                      </Text>
+
                     </View>
                   </View>
                 </TouchableOpacity>

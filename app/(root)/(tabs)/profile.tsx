@@ -1,10 +1,10 @@
 /* eslint-disable prettier/prettier */
-import { Text, View, TouchableOpacity, Alert, ScrollView, ActivityIndicator } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
-import { router } from "expo-router";
 import { useAuth } from "@/hooks/useAuth";
+import { router } from "expo-router";
+import { Bell, LogOut, Mail, Settings, Shield, User } from "lucide-react-native";
 import { useState } from "react";
-import { User, LogOut, Settings, Shield, Mail } from "lucide-react-native";
+import { ActivityIndicator, Alert, ScrollView, Text, TouchableOpacity, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
 
 const Profile = () => {
   const { user, cerrarSesion } = useAuth();
@@ -64,9 +64,6 @@ const Profile = () => {
             <User size={40} color="white" />
           </View>
           <Text className="text-[#132e3c] text-2xl font-JakartaBold text-center">
-            {user?.username || 'Usuario'}
-          </Text>
-          <Text className="text-gray-600 text-base font-JakartaMedium text-center mt-2">
             {user?.email || 'Email no disponible'}
           </Text>
 
@@ -88,11 +85,8 @@ const Profile = () => {
                 Información de la cuenta
               </Text>
             </View>
-            <Text className="text-gray-600 font-JakartaMedium text-sm mb-2">
-              Email: {user?.email || 'No disponible'}
-            </Text>
             <Text className="text-gray-600 font-JakartaMedium text-sm">
-              Usuario: {user?.username || 'No disponible'}
+              Email: {user?.email || 'No disponible'}
             </Text>
           </View>
 
@@ -109,6 +103,17 @@ const Profile = () => {
             <Shield size={20} color="#132e3c" />
             <Text className="text-[#132e3c] font-JakartaBold text-base ml-3 flex-1">
               Privacidad y Seguridad
+            </Text>
+            <Text className="text-gray-400">→</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            className="bg-white border border-gray-200 rounded-xl p-4 flex-row items-center"
+            onPress={() => router.push("/testNotifications")}
+          >
+            <Bell size={20} color="#132e3c" />
+            <Text className="text-[#132e3c] font-JakartaBold text-base ml-3 flex-1">
+              🧪 Probar Notificaciones
             </Text>
             <Text className="text-gray-400">→</Text>
           </TouchableOpacity>
